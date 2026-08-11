@@ -63,6 +63,17 @@ Location) o cambiar el centro del seed por tus coordenadas y volver a
 ejecutarlo. Negar el permiso también sirve: `posts_nearby` sin lat/lng devuelve
 lo más reciente del país entero.
 
+**Ojo con el override de ubicación de DevTools: es pegajoso.** Se queda puesto
+entre recargas y entre sesiones, y no hay nada en la página que lo delate — la
+app recibe esa posición como si fuera real. Si el punto azul aparece en una
+ciudad donde no estás, mira primero ahí (DevTools → Sensors → Location →
+*No override*). Una posición emulada se reconoce porque dos lecturas seguidas
+salen idénticas al sexto decimal; una real siempre baila un poco.
+
+Y el permiso también se recuerda: una vez concedido, el navegador no vuelve a
+preguntar. Para ver otra vez el diálogo hay que reiniciarlo en el candado de la
+barra de direcciones.
+
 Para probar el cierre de una solicitud, el token de cada fila es `seed:` más su
 slug — `resolve_post(<id>, 'seed:rescate-cra13')`.
 
@@ -133,6 +144,24 @@ manda a alguien a un sitio equivocado, y eso cuesta tiempo real.
 
 **Las publicaciones caducan a los 7 días** (`expires_at`). Hay una función
 `expire_old_posts()` lista para programar con `pg_cron`.
+
+**La ubicación se escucha, no se lee una vez.** `watchLocation()` usa
+`watchPosition` y se queda con la lectura más precisa, porque la primera que
+entrega el navegador suele venir de la IP o de la antena y puede estar a
+kilómetros. Para al bajar de ±50 m o a los 20 segundos, lo que ocurra antes.
+Nada de `maximumAge`: una posición cacheada de hace un minuto puede ser de otro
+barrio, y aquí eso manda a alguien a la dirección equivocada.
+
+**La precisión decide el encuadre.** El zoom al aterrizar no es fijo: se
+encuadra el círculo de incertidumbre, acotado entre `LOCATED_MIN_ZOOM` y
+`LOCATED_MAX_ZOOM`. Con ±20 m se llega a la calle; con ±5 km el mapa se queda
+lejos a propósito y sale el aviso de "ubicación aproximada". Acercarse a una
+esquina concreta cuando el error es de kilómetros es mentir con el encuadre, y
+las distancias de las tarjetas heredan ese error. El halo azul alrededor del
+punto es ese mismo radio a escala.
+
+El mapa deja de seguir al GPS en cuanto la persona arrastra o hace zoom: estar
+explorando y que la vista te devuelva a tu casa es insufrible.
 
 ### Interfaz
 
