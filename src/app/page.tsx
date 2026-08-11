@@ -2,40 +2,52 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { HandHeart, Plus } from "lucide-react";
+import { HandHeart, LocateFixed, Plus } from "lucide-react";
 
 import { MapView } from "@/components/MapView";
 import { NearbySheet, SNAP_PEEK } from "@/components/NearbySheet";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { requestLocation } from "@/lib/geo";
+import {
+  COARSE_ACCURACY_M,
+  formatAccuracy,
+  watchLocation,
+  type LocationState,
+} from "@/lib/geo";
 import { fetchNearbyPosts } from "@/lib/posts";
-import type { Coords, Post } from "@/lib/models";
+import type { Post } from "@/lib/models";
+
+const LOCATING: LocationState = {
+  fix: null,
+  status: "locating",
+  error: null,
+};
 
 export default function HomePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isDemo, setIsDemo] = useState(false);
-  const [userLocation, setUserLocation] = useState<Coords | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [location, setLocation] = useState<LocationState>(LOCATING);
+  /** Cambiarlo reinicia la escucha del GPS: es el botón de "reintentar". */
+  const [locationAttempt, setLocationAttempt] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [snap, setSnap] = useState<number>(SNAP_PEEK);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Pedir la ubicación en cuanto abre. Si la niegan seguimos: se muestran las
-  // solicitudes más recientes del país en vez de una pantalla vacía.
+  // Pedir la ubicación en cuanto abre — el permiso del navegador salta aquí.
+  // Si la niegan seguimos: se muestran las solicitudes más recientes del país
+  // en vez de una pantalla vacía.
+  //
+  // Es una escucha y no una lectura suelta porque la primera posición que da
+  // el navegador suele ser gruesa y va afinando durante unos segundos.
+  // `watchLocation` sólo avisa cuando mejora.
   useEffect(() => {
-    let cancelled = false;
-    requestLocation().then(({ coords, error: geoError }) => {
-      if (cancelled) return;
-      setUserLocation(coords);
-      setLocationError(geoError);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    const stop = watchLocation(setLocation);
+    return stop;
+  }, [locationAttempt]);
+
+  const userLocation = location.fix?.coords ?? null;
 
   // Primera carga sin esperar al GPS, y recarga cuando llega la ubicación.
   // Durante la recarga se mantiene la lista anterior en pantalla: mejor eso
@@ -74,11 +86,16 @@ export default function HomePage() {
     [posts],
   );
 
+  const coarseFix =
+    location.fix && location.fix.accuracyM > COARSE_ACCURACY_M
+      ? location.fix
+      : null;
+
   return (
     <main className="h-screen-safe relative w-full overflow-hidden">
       <MapView
         posts={posts}
-        userLocation={userLocation}
+        userFix={location.fix}
         selectedId={selectedId}
         onSelect={setSelectedId}
       />
@@ -108,10 +125,30 @@ export default function HomePage() {
           </Alert>
         )}
 
-        {locationError && (
+        {location.error && (
+          <Alert className="pointer-events-auto bg-card/95 backdrop-blur">
+            <AlertDescription className="flex items-center gap-2 text-[11px]">
+              <span className="flex-1">{location.error}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 shrink-0 px-2 text-[11px]"
+                onClick={() => setLocationAttempt((n) => n + 1)}
+              >
+                <LocateFixed data-icon="inline-start" className="size-3.5!" />
+                Reintentar
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Decirlo es parte de la información: con un error de kilómetros, "a
+            300 m de ti" es un dato falso y quien lo lee toma decisiones con él. */}
+        {coarseFix && (
           <Alert className="pointer-events-auto bg-card/95 backdrop-blur">
             <AlertDescription className="text-[11px]">
-              {locationError}
+              Ubicación aproximada ({formatAccuracy(coarseFix.accuracyM)}). Las
+              distancias son orientativas.
             </AlertDescription>
           </Alert>
         )}

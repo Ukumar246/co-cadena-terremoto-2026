@@ -11,7 +11,22 @@
 export const DEFAULT_CENTER: [number, number] = [-74.1, 4.6];
 export const DEFAULT_ZOOM = 5;
 
-/** Zoom al que se aterriza tras geolocalizar. */
+/**
+ * Zoom al aterrizar sobre la persona.
+ *
+ * No es un número fijo: se encuadra el círculo de incertidumbre que reporta el
+ * navegador, acotado entre estos dos. Con una lectura de ±20 m se llega al
+ * máximo; con una de ±5 km el mapa se queda lejos a propósito, porque acercarse
+ * a una calle concreta cuando el error es de kilómetros es mentir con el
+ * encuadre.
+ *
+ * El máximo es 16 y no más porque las teselas de OpenFreeMap llegan a z14: por
+ * encima no aparece detalle nuevo, sólo se agranda el mismo.
+ */
+export const LOCATED_MAX_ZOOM = 16;
+export const LOCATED_MIN_ZOOM = 9;
+
+/** Encuadre cuando hay posición pero no se sabe con qué precisión. */
 export const LOCATED_ZOOM = 13;
 
 /** Radio por defecto de la búsqueda "cerca de mí". */
