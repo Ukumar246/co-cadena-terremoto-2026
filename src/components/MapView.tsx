@@ -38,10 +38,10 @@ function buildMarkerElement(post: Post): HTMLElement {
   const ring = document.createElement("span");
   ring.style.cssText = `
     position:absolute; inset:0; border-radius:9999px;
-    background:#fff; border:3px solid ${post.isUrgent ? "#dc2626" : category.color};
+    background:var(--card); border:3px solid ${post.isUrgent ? "var(--destructive)" : category.color};
     box-shadow:0 4px 12px rgb(0 0 0 / .28); overflow:hidden;
     display:flex; align-items:center; justify-content:center;
-    font: 600 15px/1 var(--font-geist-sans, system-ui); color:#0d1117;
+    font: 600 15px/1 var(--font-sans, system-ui); color:var(--card-foreground);
   `;
 
   if (post.avatarUrl) {
@@ -66,7 +66,7 @@ function buildMarkerElement(post: Post): HTMLElement {
   badge.setAttribute("aria-hidden", "true");
   badge.style.cssText = `
     position:absolute; right:-4px; bottom:-4px; width:22px; height:22px;
-    border-radius:9999px; background:#fff; border:2px solid ${category.color};
+    border-radius:9999px; background:var(--card); border:2px solid ${category.color};
     display:flex; align-items:center; justify-content:center; font-size:11px;
   `;
 
@@ -77,7 +77,7 @@ function buildMarkerElement(post: Post): HTMLElement {
     pulse.setAttribute("aria-hidden", "true");
     pulse.style.cssText = `
       position:absolute; inset:-6px; border-radius:9999px;
-      border:2px solid #dc2626; opacity:.55; animation: ay-pulse 1.9s ease-out infinite;
+      border:2px solid var(--destructive); opacity:.55; animation: ay-pulse 1.9s ease-out infinite;
     `;
     wrapper.prepend(pulse);
   }
@@ -90,7 +90,7 @@ function buildUserElement(): HTMLElement {
   el.setAttribute("aria-hidden", "true");
   el.style.cssText = `
     width:18px; height:18px; border-radius:9999px; background:#2563eb;
-    border:3px solid #fff; box-shadow:0 0 0 3px rgb(37 99 235 / .25);
+    border:3px solid var(--background); box-shadow:0 0 0 3px rgb(37 99 235 / .25);
   `;
   return el;
 }
@@ -248,7 +248,7 @@ export function MapView({ posts, userLocation, selectedId, onSelect }: MapViewPr
 
       {status === "failed" && (
         <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 px-6 text-center">
-          <p className="text-sm text-[var(--color-ink-2)]">
+          <p className="text-sm text-muted-foreground">
             No pudimos cargar el mapa. Las solicitudes cercanas siguen abajo en la
             lista.
           </p>

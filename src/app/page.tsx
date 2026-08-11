@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { HandHeart, Plus } from "lucide-react";
 
 import { MapView } from "@/components/MapView";
-import { NearbySheet } from "@/components/NearbySheet";
+import { NearbySheet, SNAP_PEEK } from "@/components/NearbySheet";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { requestLocation } from "@/lib/geo";
 import { fetchNearbyPosts } from "@/lib/posts";
 import type { Coords, Post } from "@/lib/models";
@@ -15,7 +19,7 @@ export default function HomePage() {
   const [userLocation, setUserLocation] = useState<Coords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [snap, setSnap] = useState<number>(SNAP_PEEK);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,7 +70,7 @@ export default function HomePage() {
   );
 
   const urgentCount = useMemo(
-    () => posts.filter((post) => post.urgency === "alta").length,
+    () => posts.filter((post) => post.isUrgent).length,
     [posts],
   );
 
@@ -81,43 +85,52 @@ export default function HomePage() {
 
       {/* Barra superior: identidad + estado, sin tapar el mapa. */}
       <header className="pt-safe pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 px-3">
-        <div className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)]/95 px-3 py-2 shadow-sm backdrop-blur">
-          <span className="text-lg" aria-hidden="true">
-            🤝
-          </span>
+        <Card
+          size="sm"
+          className="pointer-events-auto flex-row items-center gap-2 bg-card/95 px-3 backdrop-blur"
+        >
+          <HandHeart className="size-5 text-primary" aria-hidden="true" />
           <div className="min-w-0 flex-1">
             <h1 className="text-sm leading-tight font-semibold">Ayuda Ya</h1>
-            <p className="truncate text-[11px] text-[var(--color-ink-2)]">
+            <p className="truncate text-[11px] text-muted-foreground">
               {urgentCount > 0
                 ? `${urgentCount} ${urgentCount === 1 ? "caso urgente" : "casos urgentes"} cerca`
                 : "Quién necesita ayuda cerca de ti"}
             </p>
           </div>
-        </div>
+        </Card>
 
         {isDemo && (
-          <p className="pointer-events-auto rounded-xl bg-amber-500 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm">
-            Datos de ejemplo — falta conectar Supabase (ver README).
-          </p>
+          <Alert className="pointer-events-auto bg-card/95 backdrop-blur">
+            <AlertDescription className="text-[11px]">
+              Datos de ejemplo — falta conectar Supabase (ver README).
+            </AlertDescription>
+          </Alert>
         )}
 
         {locationError && (
-          <p className="pointer-events-auto rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]/95 px-3 py-1.5 text-[11px] text-[var(--color-ink-2)] shadow-sm">
-            {locationError}
-          </p>
+          <Alert className="pointer-events-auto bg-card/95 backdrop-blur">
+            <AlertDescription className="text-[11px]">
+              {locationError}
+            </AlertDescription>
+          </Alert>
         )}
       </header>
 
       {/* Acción principal. Se esconde en modo detalle para no competir con
-          el botón de WhatsApp. */}
+          el botón de WhatsApp, y sube con el cajón para no quedar tapada. */}
       {!selected && (
-        <Link
-          href="/pedir"
-          className="absolute right-4 bottom-[calc(27dvh+1rem)] z-30 flex h-14 items-center gap-2 rounded-full bg-[var(--color-urgent)] px-5 text-base font-semibold text-white shadow-lg active:brightness-95"
-          style={{ bottom: expanded ? "calc(68dvh + 1rem)" : "calc(27dvh + 1rem)" }}
+        <Button
+          asChild
+          size="lg"
+          className="absolute right-4 z-40 h-14 rounded-full bg-destructive px-5 text-base text-white shadow-lg transition-[bottom] duration-300 hover:bg-destructive/90"
+          style={{ bottom: `calc(${snap * 100}dvh + 1rem)` }}
         >
-          <span aria-hidden="true">＋</span> Pedir ayuda
-        </Link>
+          <Link href="/pedir">
+            <Plus data-icon="inline-start" className="size-5!" />
+            Pedir ayuda
+          </Link>
+        </Button>
       )}
 
       <NearbySheet
@@ -125,8 +138,8 @@ export default function HomePage() {
         selected={selected}
         loading={loading}
         error={error}
-        expanded={expanded}
-        onToggleExpanded={() => setExpanded((value) => !value)}
+        snap={snap}
+        onSnapChange={setSnap}
         onSelect={setSelectedId}
       />
     </main>

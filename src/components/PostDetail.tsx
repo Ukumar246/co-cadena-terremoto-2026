@@ -2,8 +2,12 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { ArrowLeft, MapPin, MessageCircle, Navigation } from "lucide-react";
 
-import { Avatar } from "./Avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Post, PostWithContact } from "@/lib/models";
 import { fetchPostDetail } from "@/lib/posts";
 
@@ -43,38 +47,49 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
   }, [post.id]);
 
   const category = post.categoryMeta;
-  const urgency = post.urgencyMeta;
   const waLink = detail?.contactLink() ?? null;
 
   return (
     <div className="flex flex-col gap-4">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onBack}
-        className="-ml-1 flex w-fit items-center gap-1 text-sm font-medium text-[var(--color-ink-2)]"
+        className="-ml-2 w-fit text-muted-foreground"
       >
-        <span aria-hidden="true">←</span> Volver a la lista
-      </button>
+        <ArrowLeft data-icon="inline-start" />
+        Volver a la lista
+      </Button>
 
       <div className="flex gap-3">
-        <Avatar name={post.name} src={post.avatarUrl} size={56} ringColor={category.color} />
+        <Avatar
+          className="size-14"
+          style={{ boxShadow: `0 0 0 2px ${category.color}` }}
+        >
+          {post.avatarUrl && (
+            <AvatarImage asChild src={post.avatarUrl}>
+              <Image src={post.avatarUrl} alt="" width={56} height={56} />
+            </AvatarImage>
+          )}
+          <AvatarFallback className="text-base font-semibold">
+            {post.initials}
+          </AvatarFallback>
+        </Avatar>
+
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-lg font-semibold">{post.name}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span
-              className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
+            <Badge
+              className="border-transparent text-white"
               style={{ backgroundColor: category.color }}
             >
               {category.emoji} {category.label}
-            </span>
-            <span
-              className="rounded-full px-2 py-0.5 text-xs font-semibold text-white"
-              style={{ backgroundColor: urgency.color }}
-            >
-              {urgency.label}
-            </span>
+            </Badge>
+            <Badge variant={post.isUrgent ? "destructive" : "secondary"}>
+              {post.urgencyMeta.label}
+            </Badge>
           </div>
-          <p className="mt-1 text-xs text-[var(--color-ink-2)]">
+          <p className="mt-1 text-xs text-muted-foreground">
             {post.age}
             {post.distanceM != null && ` · a ${post.distanceLabel} de ti`}
           </p>
@@ -84,7 +99,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
       <p className="text-[15px] leading-relaxed">{post.description}</p>
 
       {post.photoUrl && (
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[var(--color-surface-2)]">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
           <Image
             src={post.photoUrl}
             alt={`Foto de la situación de ${post.name}`}
@@ -96,35 +111,39 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
       )}
 
       {post.addressLabel && (
-        <p className="text-sm text-[var(--color-ink-2)]">
-          <span aria-hidden="true">📍</span> {post.addressLabel}
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <MapPin className="size-4 shrink-0" aria-hidden="true" />
+          {post.addressLabel}
         </p>
       )}
 
       <div className="flex flex-col gap-2">
         {waLink ? (
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex h-13 items-center justify-center gap-2 rounded-2xl bg-[#25d366] px-4 py-3.5 text-base font-semibold text-white active:brightness-95"
+          <Button
+            asChild
+            // Verde de WhatsApp: aquí el color es reconocimiento de marca, no
+            // decoración, así que no sale de los tokens del tema.
+            className="h-13 bg-[#25d366] text-base text-white hover:bg-[#1fb457]"
           >
-            Escribir por WhatsApp
-          </a>
-        ) : (
-          <div className="flex h-13 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] px-4 py-3.5 text-sm text-[var(--color-ink-2)]">
-            {error ?? "Cargando contacto…"}
+            <a href={waLink} target="_blank" rel="noopener noreferrer">
+              <MessageCircle data-icon="inline-start" className="size-5!" />
+              Escribir por WhatsApp
+            </a>
+          </Button>
+        ) : error ? (
+          <div className="flex h-13 items-center justify-center rounded-lg bg-muted px-4 text-center text-sm text-muted-foreground">
+            {error}
           </div>
+        ) : (
+          <Skeleton className="h-13 w-full rounded-lg" />
         )}
 
-        <a
-          href={post.directionsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center rounded-2xl border border-[var(--color-line)] px-4 py-3 text-sm font-medium active:bg-[var(--color-surface-2)]"
-        >
-          Cómo llegar
-        </a>
+        <Button asChild variant="outline" className="h-11">
+          <a href={post.directionsUrl} target="_blank" rel="noopener noreferrer">
+            <Navigation data-icon="inline-start" />
+            Cómo llegar
+          </a>
+        </Button>
       </div>
     </div>
   );

@@ -1,28 +1,102 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-@theme {
-  --color-surface: #ffffff;
-  --color-surface-2: #f5f6f8;
-  --color-ink: #0d1117;
-  --color-ink-2: #545c68;
-  --color-line: #e3e6ea;
-  --color-urgent: #dc2626;
-  --color-urgent-ink: #ffffff;
-  --color-brand: #0f5c4a;
+/* shadcn trae por defecto un modo oscuro por clase (`.dark`). Esta app no
+   tiene selector de tema: sigue la preferencia del sistema. Al no redefinir
+   `@custom-variant dark`, Tailwind conserva su variante nativa basada en
+   `prefers-color-scheme`, que es justo lo que queremos. */
 
+@theme inline {
+  --font-heading: var(--font-sans);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* `@theme` NO puede anidarse dentro de `@media`: Tailwind v4 lo aplana y estos
-   valores acaban pisando a los claros siempre, dejando la app en oscuro fijo.
-   Las variables ya existen, así que aquí se redefinen como CSS normal. */
+/* La paleta de la app expresada con los nombres semánticos de shadcn, para
+   que los componentes de la librería y los nuestros hablen el mismo idioma.
+   `primary` es el verde de marca; `destructive` el rojo de urgencia. */
+:root {
+  --background: #ffffff;
+  --foreground: #0d1117;
+  --card: #ffffff;
+  --card-foreground: #0d1117;
+  --popover: #ffffff;
+  --popover-foreground: #0d1117;
+  --primary: #0f5c4a;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f6f8;
+  --secondary-foreground: #0d1117;
+  --muted: #f5f6f8;
+  --muted-foreground: #545c68;
+  --accent: #f5f6f8;
+  --accent-foreground: #0d1117;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e3e6ea;
+  --input: #e3e6ea;
+  --ring: #0f5c4a;
+  --radius: 0.75rem;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-surface: #101317;
-    --color-surface-2: #191d23;
-    --color-ink: #f2f4f7;
-    --color-ink-2: #9aa3af;
-    --color-line: #272c34;
+    --background: #101317;
+    --foreground: #f2f4f7;
+    --card: #171b21;
+    --card-foreground: #f2f4f7;
+    --popover: #171b21;
+    --popover-foreground: #f2f4f7;
+    --primary: #2fa88a;
+    --primary-foreground: #06231c;
+    --secondary: #191d23;
+    --secondary-foreground: #f2f4f7;
+    --muted: #191d23;
+    --muted-foreground: #9aa3af;
+    --accent: #191d23;
+    --accent-foreground: #f2f4f7;
+    --destructive: #f0575a;
+    --destructive-foreground: #16090a;
+    --border: #272c34;
+    --input: #272c34;
+    --ring: #2fa88a;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
@@ -32,8 +106,6 @@ body {
 }
 
 body {
-  background: var(--color-surface);
-  color: var(--color-ink);
   /* El mapa gestiona su propio gesto: nada de pull-to-refresh ni rebote. */
   overscroll-behavior: none;
 }
@@ -55,17 +127,17 @@ body {
    y lo estilamos desde los componentes. */
 .maplibregl-popup-content {
   padding: 0;
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
-  background: var(--color-surface);
+  background: var(--popover);
 }
 .maplibregl-popup-close-button {
   display: none;
 }
 .maplibregl-popup-tip {
-  border-top-color: var(--color-surface) !important;
-  border-bottom-color: var(--color-surface) !important;
+  border-top-color: var(--popover) !important;
+  border-bottom-color: var(--popover) !important;
 }
 .maplibregl-ctrl-attrib {
   font-size: 10px;

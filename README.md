@@ -28,6 +28,50 @@ publicar de verdad requiere conectar la base de datos.
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API).
 4. Reiniciar `npm run dev`. El aviso amarillo desaparece.
 
+### Datos de prueba
+
+Con Supabase recién conectado la base está vacía y el mapa se ve igual que si
+no hubiera nadie pidiendo ayuda. Para poblarla:
+
+```bash
+npm run seed:images   # sube los avatares y fotos al bucket `photos`
+```
+
+y después ejecutar `supabase/seed.sql` en el **SQL Editor**. Deja 25
+solicitudes: 18 dentro del radio de 25 km, 5 repartidas por el país y 2 que
+*no deben verse* (una resuelta y otra caducada) para comprobar que el filtrado
+funciona. Cubre las nueve categorías, los tres niveles de urgencia,
+descripciones al límite de los 500 caracteres, nombres de una sola palabra y de
+59, y filas sin avatar, sin foto y sin dirección.
+
+Es idempotente: borra su propia siembra y la vuelve a poner. Sólo toca filas
+con `owner_token` que empiece por `seed:`, así que las publicaciones que hagas
+probando la app sobreviven.
+
+**Las imágenes tienen que subirse al bucket, no enlazarse de internet.**
+`next.config.ts` sólo autoriza el host de Supabase Storage y `next/image`
+lanza un error en tiempo de ejecución con cualquier otro. `seed-images.mjs`
+las dibuja sin dependencias y las sube; usa la service role key si está en el
+`.env` y si no la clave pública, que también sirve porque el bucket acepta
+subidas anónimas a propósito.
+
+**Dónde caen las solicitudes.** Las posiciones son distancia + rumbo desde un
+centro configurable en el propio `seed.sql` (`center_lat` / `center_lng`), por
+defecto Chapinero. El navegador te va a geolocalizar donde estés de verdad, así
+que hay dos caminos: fingir la ubicación en Bogotá (DevTools → Sensors →
+Location) o cambiar el centro del seed por tus coordenadas y volver a
+ejecutarlo. Negar el permiso también sirve: `posts_nearby` sin lat/lng devuelve
+lo más reciente del país entero.
+
+Para probar el cierre de una solicitud, el token de cada fila es `seed:` más su
+slug — `resolve_post(<id>, 'seed:rescate-cra13')`.
+
+Limpiar sin volver a sembrar:
+
+```sql
+delete from public.posts where owner_token like 'seed:%';
+```
+
 ## Cómo está armado
 
 | Ruta / archivo | Qué hace |
@@ -40,8 +84,11 @@ publicar de verdad requiere conectar la base de datos.
 | `src/lib/users.ts` | Perfil de quien tiene sesión iniciada |
 | `src/lib/geo.ts` | Geolocalización del navegador y formato en español |
 | `supabase/schema.sql` | Tabla, índices geoespaciales, RLS y funciones RPC |
+| `supabase/seed.sql` | 25 solicitudes de prueba, idempotentes y recentrables |
 | `public/sw.js` | Service worker: shell y teselas en caché, datos siempre frescos |
 | `scripts/generate-icons.mjs` | Genera los iconos PNG de la PWA (`npm run icons`) |
+| `scripts/seed-images.mjs` | Dibuja y sube las imágenes del seed (`npm run seed:images`) |
+| `scripts/png.mjs` | Codificador PNG mínimo que comparten los dos scripts |
 
 ### Decisiones que conviene conocer
 
