@@ -7,7 +7,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { Button } from "@/components/ui/button";
 import { MAP_STYLE_URL } from "@/lib/config";
+import { configureMapLibre } from "@/lib/maplibre";
 import { Coords } from "@/lib/models";
+
+// Sin esto el mapa se dibuja pero se queda sin capa vectorial, en silencio.
+configureMapLibre();
 
 interface LocationPickerProps {
   value: Coords;

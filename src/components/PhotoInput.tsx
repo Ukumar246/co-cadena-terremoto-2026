@@ -14,8 +14,12 @@ interface PhotoInputProps {
   maxSide?: number;
   value: string | null;
   onChange: (url: string | null) => void;
-  /** Recorte circular para el avatar, rectangular para la foto. */
-  shape?: "circle" | "wide";
+  /**
+   * `circle` para el avatar, `wide` para una miniatura junto al texto y
+   * `tall` para cuando la foto es el asunto de la pantalla — un objetivo
+   * grande que se acierta con el pulgar y sin mirar.
+   */
+  shape?: "circle" | "wide" | "tall";
 }
 
 /**
@@ -54,6 +58,69 @@ export function PhotoInput({
   }
 
   const isCircle = shape === "circle";
+
+  // Variante protagonista: toda la zona es el botón, no un botón al lado de
+  // una miniatura.
+  if (shape === "tall") {
+    return (
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/40 transition-colors active:bg-muted disabled:opacity-70"
+        >
+          {value ? (
+            <>
+              <Image src={value} alt="" fill sizes="100vw" className="object-cover" />
+              <span className="absolute right-2 bottom-2 rounded-lg bg-background/90 px-2.5 py-1 text-xs font-medium shadow-sm">
+                Cambiar
+              </span>
+            </>
+          ) : (
+            <span className="flex flex-col items-center gap-2 text-muted-foreground">
+              {uploading ? (
+                <Loader2 className="size-8 animate-spin" />
+              ) : (
+                <Camera className="size-8" aria-hidden="true" />
+              )}
+              <span className="text-sm font-medium">
+                {uploading ? "Subiendo…" : label}
+              </span>
+              {hint && !uploading && <span className="text-xs">{hint}</span>}
+            </span>
+          )}
+        </button>
+
+        {value && !uploading && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="w-fit text-muted-foreground"
+            onClick={() => {
+              onChange(null);
+              if (inputRef.current) inputRef.current.value = "";
+            }}
+          >
+            <X data-icon="inline-start" />
+            Quitar foto
+          </Button>
+        )}
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <input
+          id={inputId}
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(event) => handleFile(event.target.files?.[0])}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2">

@@ -1,4 +1,10 @@
-import { getCategory, getUrgency, type CategoryMeta, type UrgencyMeta } from "../categories";
+import {
+  CATEGORIES,
+  getCategory,
+  getUrgency,
+  type CategoryMeta,
+  type UrgencyMeta,
+} from "../categories";
 import { formatAge, formatDistance } from "../geo";
 import { defaultContactMessage, normalizeWhatsapp, whatsappLink } from "../whatsapp";
 import type { User } from "./user";
@@ -10,6 +16,8 @@ import {
   type PostStatus,
   type Urgency,
 } from "./values";
+
+const CATEGORY_IDS = new Set<string>(CATEGORIES.map((category) => category.id));
 
 /** Formato del cable para el listado del mapa. Sin teléfono, a propósito. */
 export interface PostRow {
@@ -209,8 +217,24 @@ export interface NewPostInit {
   description: string;
   coords: Coords;
   addressLabel: string | null;
-  photoUrl: string | null;
+  /** Obligatoria: es el primer paso del formulario y lo que da contexto. */
+  photoUrl: string;
   urgency: Urgency;
+}
+
+/** Campos que puede señalar `validate()`, para poder filtrar por paso. */
+export type NewPostField =
+  | "photo"
+  | "category"
+  | "description"
+  | "coords"
+  | "name"
+  | "whatsapp";
+
+export interface ValidationProblem {
+  field: NewPostField;
+  /** Mensaje ya redactado, listo para mostrar. */
+  message: string;
 }
 
 /**
@@ -233,7 +257,7 @@ export class NewPost {
   readonly description: string;
   readonly coords: Coords;
   readonly addressLabel: string | null;
-  readonly photoUrl: string | null;
+  readonly photoUrl: string;
   readonly urgency: Urgency;
 
   constructor(init: NewPostInit) {
@@ -249,7 +273,10 @@ export class NewPost {
   }
 
   /** Arranca el formulario con los datos de la cuenta ya puestos. */
-  static forUser(user: User, init: Partial<NewPostInit> & { coords: Coords }): NewPost {
+  static forUser(
+    user: User,
+    init: Partial<NewPostInit> & { coords: Coords; photoUrl: string },
+  ): NewPost {
     return new NewPost({
       name: user.name,
       avatarUrl: user.avatarUrl,
@@ -257,7 +284,6 @@ export class NewPost {
       category: "otro",
       description: "",
       addressLabel: null,
-      photoUrl: null,
       urgency: "media",
       ...init,
     });
@@ -267,27 +293,63 @@ export class NewPost {
     return new NewPost({ ...this, ...changes });
   }
 
-  /** Mensajes listos para mostrar, en el orden en que aparecen los campos. */
-  validate(): string[] {
-    const problems: string[] = [];
+  /**
+   * Problemas encontrados, en el orden en que aparecen los campos. Cada uno
+   * dice de qué campo es, para que el formulario por pasos pueda enseñar sólo
+   * los del paso actual sin duplicar las reglas.
+   */
+  validate(): ValidationProblem[] {
+    const problems: ValidationProblem[] = [];
     const name = this.name.trim();
     const description = this.description.trim();
 
-    if (name.length < 2 || name.length > 60) {
-      problems.push("Escribe tu nombre (entre 2 y 60 caracteres).");
+    if (!this.photoUrl) {
+      problems.push({
+        field: "photo",
+        message: "Añade una foto de la situación.",
+      });
     }
-    if (!normalizeWhatsapp(this.whatsapp)) {
-      problems.push("Necesitamos un número de WhatsApp válido para que te contacten.");
+    if (!CATEGORY_IDS.has(this.category)) {
+      problems.push({
+        field: "category",
+        message: "Elige con qué necesitas ayuda.",
+      });
     }
     if (description.length < 5) {
-      problems.push("Cuéntanos con qué necesitas ayuda.");
+      problems.push({
+        field: "description",
+        message: "Cuéntanos con qué necesitas ayuda.",
+      });
     } else if (description.length > 500) {
-      problems.push("La descripción no puede pasar de 500 caracteres.");
+      problems.push({
+        field: "description",
+        message: "La descripción no puede pasar de 500 caracteres.",
+      });
     }
     if (!Coords.parse(this.coords.lat, this.coords.lng)) {
-      problems.push("Marca en el mapa dónde necesitas la ayuda.");
+      problems.push({
+        field: "coords",
+        message: "Marca en el mapa dónde necesitas la ayuda.",
+      });
+    }
+    if (name.length < 2 || name.length > 60) {
+      problems.push({
+        field: "name",
+        message: "Escribe tu nombre (entre 2 y 60 caracteres).",
+      });
+    }
+    if (!normalizeWhatsapp(this.whatsapp)) {
+      problems.push({
+        field: "whatsapp",
+        message: "Necesitamos un número de WhatsApp válido para que te contacten.",
+      });
     }
     return problems;
+  }
+
+  /** Los problemas que corresponden a un paso concreto del formulario. */
+  problemsIn(fields: readonly NewPostField[]): ValidationProblem[] {
+    return this.validate().filter((problem) => fields.includes(problem.field));
   }
 
   get isValid(): boolean {

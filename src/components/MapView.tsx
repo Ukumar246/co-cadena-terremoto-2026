@@ -5,12 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 // maplibre-gl v6 sólo tiene exportaciones nombradas: `Map` se renombra para no
 // pisar el `Map` nativo que usamos para indexar marcadores.
-import {
-  Map as MapLibreMap,
-  Marker,
-  NavigationControl,
-  setWorkerUrl,
-} from "maplibre-gl";
+import { Map as MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,22 +18,10 @@ import {
   MAP_STYLE_URL,
 } from "@/lib/config";
 import { COARSE_ACCURACY_M, metersPerPixel, type LocationFix } from "@/lib/geo";
+import { configureMapLibre } from "@/lib/maplibre";
 import type { Post } from "@/lib/models";
 
-/**
- * MapLibre v6 carga su worker desde un fichero suelto y lo localiza con
- * `new URL(nombre, import.meta.url)`, donde `nombre` sale de un ternario.
- * Turbopack resuelve esas URLs estáticamente y con un ternario no puede: le
- * pasa al worker la URL del módulo principal. El worker arranca cargando la
- * librería entera, nunca contesta al protocolo de teselas y el mapa se queda
- * sin capa vectorial — sin errores en consola, porque el fallo es interno al
- * worker. Sólo sobrevive el relieve, que es una fuente ráster y no pasa por
- * ahí.
- *
- * `scripts/copy-maplibre-worker.mjs` deja el worker en `public/maplibre/` y
- * aquí se le da esa URL fija, que ningún bundler tiene que adivinar.
- */
-setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+configureMapLibre();
 
 interface MapViewProps {
   posts: Post[];

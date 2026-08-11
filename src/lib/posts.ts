@@ -69,7 +69,7 @@ export async function fetchPostDetail(id: string): Promise<PostWithContact | nul
  */
 export async function createPost(draft: NewPost, ownerToken: string): Promise<string> {
   const problems = draft.validate();
-  if (problems.length > 0) throw new Error(problems[0]);
+  if (problems.length > 0) throw new Error(problems[0].message);
 
   const supabase = getSupabaseBrowserClient();
   if (!supabase) {

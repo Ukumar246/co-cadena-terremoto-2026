@@ -88,7 +88,13 @@ delete from public.posts where owner_token like 'seed:%';
 | Ruta / archivo | Qué hace |
 | --- | --- |
 | `src/app/page.tsx` | Landing: mapa a pantalla completa + hoja inferior con las solicitudes cercanas |
-| `src/app/pedir/page.tsx` | Formulario de publicación — **pendiente**, hoy es un marcador de posición |
+| `src/app/pedir/page.tsx` | Formulario de publicación (sólo metadatos; la UI es `PedirForm`) |
+| `src/components/PedirForm.tsx` | El formulario en 3 pasos: foto → necesidad → ubicación y contacto |
+| `src/components/LocationPicker.tsx` | Mapa con pin fijo al centro para afinar el sitio |
+| `src/components/PhotoInput.tsx` | Selector de imagen que reescala y sube al bucket |
+| `src/lib/maplibre.ts` | Configuración global de MapLibre (URL del worker) |
+| `src/lib/storage.ts` | Subida de imágenes a Supabase Storage |
+| `src/lib/owner-token.ts` | Token del dispositivo, en `localStorage` |
 | `src/components/MapView.tsx` | MapLibre GL: marcadores con avatar, punto del usuario, vuelo a la ubicación |
 | `src/components/NearbySheet.tsx` | Cajón inferior arrastrable, sobre el `Drawer` de shadcn (vaul) |
 | `src/components/ui/` | Componentes de shadcn. Son nuestros: se editan sin miedo |
@@ -115,6 +121,33 @@ que es lo que React necesita para detectar el cambio.
 > límite. Hoy no afecta porque toda la app es `"use client"`, pero si `/pedir`
 > o cualquier pantalla futura se renderiza en servidor, hay que pasar la fila
 > cruda e hidratar con `Post.fromRow()` dentro del componente cliente.
+
+**El formulario va por pasos y empieza por la foto.** Tres pantallas: foto,
+qué necesitas, dónde y quién eres. La foto es obligatoria y va primera porque
+es lo que menos cuesta dar cuando estás mal —apuntar y disparar— y lo que más
+información lleva: quien va a moverse ve de un vistazo qué llevar. Además
+empieza a subirse mientras se rellena el resto.
+
+**Las reglas de validación no están en el formulario.** `NewPost.validate()`
+devuelve `{ field, message }`, y cada paso pide sólo los suyos con
+`problemsIn([...])`. Así los límites viven en un único sitio —el mismo que ya
+espeja los CHECK de la tabla— y añadir un paso no significa copiar reglas.
+
+**Las fotos se suben al elegirlas, no al enviar.** Así el envío final es una
+sola llamada rápida, y si la red falla, falla mientras la persona sigue en la
+pantalla y puede reintentar — no al final, cuando cree que ya terminó. Se
+reescalan en el navegador antes de subirlas: el bucket admite 8 MB y una foto
+de móvil los roza, pero el problema real es que en zona de desastre la red es
+lo escaso.
+
+**El pin se mueve moviendo el mapa, no arrastrando el pin.** Con el dedo
+encima de un marcador de 30 px no se ve dónde se está soltando; con el pin
+clavado en el centro, la mano nunca tapa el objetivo.
+
+**MapLibre se configura desde `src/lib/maplibre.ts`**, no desde un componente.
+Olvidar `setWorkerUrl()` no da ningún error: el mapa se dibuja y se queda sin
+capa vectorial, en silencio. Cualquier pantalla nueva con mapa tiene que
+llamar a `configureMapLibre()`.
 
 **Registrarse es opcional.** `Post.userId` puede ser null. La propiedad de una
 publicación se prueba de dos formas: el `owner_token` (un UUID que el navegador
@@ -226,8 +259,6 @@ niegan la ubicación.
       políticas ya están; falta el flujo de Supabase Auth y las pantallas de
       perfil. Hasta entonces la app es anónima de punta a punta y `user_id`
       siempre queda en null.
-- [ ] Formulario de `/pedir`: subida de avatar y foto a Supabase Storage,
-      selección de ubicación arrastrable sobre el mapa
 - [ ] Cerrar la propia solicitud desde la app (el RPC ya existe)
 - [ ] Filtros por categoría y urgencia sobre el mapa
 - [ ] Actualización en vivo con Supabase Realtime
