@@ -13,8 +13,11 @@
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* `@theme` NO puede anidarse dentro de `@media`: Tailwind v4 lo aplana y estos
+   valores acaban pisando a los claros siempre, dejando la app en oscuro fijo.
+   Las variables ya existen, así que aquí se redefinen como CSS normal. */
 @media (prefers-color-scheme: dark) {
-  @theme {
+  :root {
     --color-surface: #101317;
     --color-surface-2: #191d23;
     --color-ink: #f2f4f7;

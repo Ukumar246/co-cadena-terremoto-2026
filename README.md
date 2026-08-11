@@ -35,18 +35,36 @@ publicar de verdad requiere conectar la base de datos.
 | `src/app/page.tsx` | Landing: mapa a pantalla completa + hoja inferior con las solicitudes cercanas |
 | `src/app/pedir/page.tsx` | Formulario de publicación — **pendiente**, hoy es un marcador de posición |
 | `src/components/MapView.tsx` | MapLibre GL: marcadores con avatar, punto del usuario, vuelo a la ubicación |
-| `src/lib/posts.ts` | Única puerta a los datos: listado, detalle, creación, cierre |
-| `src/lib/geo.ts` | Geolocalización del navegador, distancias y formato en español |
+| `src/lib/models/` | El dominio: `Post`, `PostWithContact`, `NewPost`, `User`, `Coords` |
+| `src/lib/posts.ts` | Única puerta a los datos de solicitudes: listado, detalle, creación, cierre |
+| `src/lib/users.ts` | Perfil de quien tiene sesión iniciada |
+| `src/lib/geo.ts` | Geolocalización del navegador y formato en español |
 | `supabase/schema.sql` | Tabla, índices geoespaciales, RLS y funciones RPC |
 | `public/sw.js` | Service worker: shell y teselas en caché, datos siempre frescos |
 | `scripts/generate-icons.mjs` | Genera los iconos PNG de la PWA (`npm run icons`) |
 
 ### Decisiones que conviene conocer
 
-**Sin cuentas de usuario.** La propiedad de una publicación se prueba con un
-`owner_token`: un UUID que el navegador guarda en `localStorage` y que permite
-al autor cerrar su propia solicitud. Nadie tiene que registrarse para pedir
-ayuda.
+**Los modelos son clases inmutables.** `Post`, `PostWithContact`, `NewPost`,
+`User` y `Coords` viven en `src/lib/models/`. Todos los campos son `readonly`
+y cualquier cambio devuelve una instancia nueva (`with`, `withDistanceFrom`),
+que es lo que React necesita para detectar el cambio.
+
+> **Cuidado con los Server Components.** Next.js sólo serializa objetos planos
+> al pasar props de servidor a cliente: una instancia de clase revienta ese
+> límite. Hoy no afecta porque toda la app es `"use client"`, pero si `/pedir`
+> o cualquier pantalla futura se renderiza en servidor, hay que pasar la fila
+> cruda e hidratar con `Post.fromRow()` dentro del componente cliente.
+
+**Registrarse es opcional.** `Post.userId` puede ser null. La propiedad de una
+publicación se prueba de dos formas: el `owner_token` (un UUID que el navegador
+guarda en `localStorage`) o la sesión de la cuenta dueña. Quien está bajo un
+escombro no crea una cuenta; quien sí la tiene puede cerrar su solicitud desde
+otro teléfono.
+
+**El nombre y el teléfono se copian en cada publicación** aunque haya cuenta
+detrás. Es una foto fija del momento de publicar: así la solicitud sigue siendo
+contactable aunque su autor borre la cuenta.
 
 **La tabla no se toca directamente.** `posts` tiene RLS activo *sin políticas*,
 así que `anon` no puede leerla ni escribirla. Todo pasa por cuatro funciones
@@ -80,6 +98,10 @@ niegan la ubicación.
 
 ## Pendiente
 
+- [ ] **Registro e inicio de sesión.** El modelo `User`, la tabla y las
+      políticas ya están; falta el flujo de Supabase Auth y las pantallas de
+      perfil. Hasta entonces la app es anónima de punta a punta y `user_id`
+      siempre queda en null.
 - [ ] Formulario de `/pedir`: subida de avatar y foto a Supabase Storage,
       selección de ubicación arrastrable sobre el mapa
 - [ ] Cerrar la propia solicitud desde la app (el RPC ya existe)

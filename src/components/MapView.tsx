@@ -1,39 +1,27 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 // maplibre-gl v6 sólo tiene exportaciones nombradas: `Map` se renombra para no
 // pisar el `Map` nativo que usamos para indexar marcadores.
 import { Map as MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { DEFAULT_CENTER, DEFAULT_ZOOM, LOCATED_ZOOM, MAP_STYLE_URL } from "@/lib/config";
-import { getCategory } from "@/lib/categories";
-import type { Coords, HelpPost } from "@/lib/types";
+import type { Coords, Post } from "@/lib/models";
 
 interface MapViewProps {
-  posts: HelpPost[];
+  posts: Post[];
   userLocation: Coords | null;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
-}
-
-/** Iniciales para cuando alguien publica sin foto de perfil. */
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 /**
  * El marcador es un elemento del DOM, no un componente de React: MapLibre
  * los posiciona él mismo y meter React en medio sólo añade re-renders.
  */
-function buildMarkerElement(post: HelpPost): HTMLElement {
-  const category = getCategory(post.category);
-  const isUrgent = post.urgency === "alta";
+function buildMarkerElement(post: Post): HTMLElement {
+  const category = post.categoryMeta;
 
   const wrapper = document.createElement("button");
   wrapper.type = "button";
@@ -50,7 +38,7 @@ function buildMarkerElement(post: HelpPost): HTMLElement {
   const ring = document.createElement("span");
   ring.style.cssText = `
     position:absolute; inset:0; border-radius:9999px;
-    background:#fff; border:3px solid ${isUrgent ? "#dc2626" : category.color};
+    background:#fff; border:3px solid ${post.isUrgent ? "#dc2626" : category.color};
     box-shadow:0 4px 12px rgb(0 0 0 / .28); overflow:hidden;
     display:flex; align-items:center; justify-content:center;
     font: 600 15px/1 var(--font-geist-sans, system-ui); color:#0d1117;
@@ -66,11 +54,11 @@ function buildMarkerElement(post: HelpPost): HTMLElement {
     // Si la foto no carga, no dejamos un hueco: caen las iniciales.
     img.onerror = () => {
       img.remove();
-      ring.textContent = initials(post.name);
+      ring.textContent = post.initials;
     };
     ring.appendChild(img);
   } else {
-    ring.textContent = initials(post.name);
+    ring.textContent = post.initials;
   }
 
   const badge = document.createElement("span");
@@ -84,7 +72,7 @@ function buildMarkerElement(post: HelpPost): HTMLElement {
 
   wrapper.append(ring, badge);
 
-  if (isUrgent) {
+  if (post.isUrgent) {
     const pulse = document.createElement("span");
     pulse.setAttribute("aria-hidden", "true");
     pulse.style.cssText = `
@@ -114,6 +102,7 @@ export function MapView({ posts, userLocation, selectedId, onSelect }: MapViewPr
   const userMarkerRef = useRef<Marker | null>(null);
   const hasFlownRef = useRef(false);
   const onSelectRef = useRef(onSelect);
+  const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
 
   // El handler se guarda en un ref para que cambiar de callback no obligue a
   // reconstruir todos los marcadores.
@@ -135,6 +124,16 @@ export function MapView({ posts, userLocation, selectedId, onSelect }: MapViewPr
 
     map.addControl(new NavigationControl({ showCompass: false }), "top-right");
     map.on("click", () => onSelectRef.current(null));
+
+    // Un mapa en blanco sin explicación es lo peor que puede pasar aquí: la
+    // persona cree que no hay nadie pidiendo ayuda cerca. Los fallos de
+    // teselas sueltas son normales con mala señal y no cuentan; sólo es fatal
+    // si el estilo nunca llegó a cargar.
+    map.on("load", () => setStatus("ready"));
+    map.on("error", (event) => {
+      console.error("[MapView]", event.error);
+      if (!map.isStyleLoaded()) setStatus("failed");
+    });
 
     mapRef.current = map;
     const markers = markersRef.current;
@@ -161,7 +160,7 @@ export function MapView({ posts, userLocation, selectedId, onSelect }: MapViewPr
       seen.add(post.id);
       const existing = markers.get(post.id);
       if (existing) {
-        existing.setLngLat([post.lng, post.lat]);
+        existing.setLngLat(post.coords.toLngLat());
         continue;
       }
 
@@ -174,7 +173,7 @@ export function MapView({ posts, userLocation, selectedId, onSelect }: MapViewPr
       markers.set(
         post.id,
         new Marker({ element, anchor: "bottom" })
-          .setLngLat([post.lng, post.lat])
+          .setLngLat(post.coords.toLngLat())
           .addTo(map),
       );
     }
@@ -192,13 +191,11 @@ export function MapView({ posts, userLocation, selectedId, onSelect }: MapViewPr
     const map = mapRef.current;
     if (!map || !userLocation) return;
 
-    const lngLat: [number, number] = [userLocation.lng, userLocation.lat];
-
     if (userMarkerRef.current) {
-      userMarkerRef.current.setLngLat(lngLat);
+      userMarkerRef.current.setLngLat(userLocation.toLngLat());
     } else {
       userMarkerRef.current = new Marker({ element: buildUserElement() })
-        .setLngLat(lngLat)
+        .setLngLat(userLocation.toLngLat())
         .addTo(map);
     }
 
@@ -206,7 +203,7 @@ export function MapView({ posts, userLocation, selectedId, onSelect }: MapViewPr
     // GPS se mueve un metro, mientras la persona intenta explorar.
     if (!hasFlownRef.current) {
       hasFlownRef.current = true;
-      map.flyTo({ center: lngLat, zoom: LOCATED_ZOOM, duration: 1400 });
+      map.flyTo({ center: userLocation.toLngLat(), zoom: LOCATED_ZOOM, duration: 1400 });
     }
   }, [userLocation]);
 
@@ -219,7 +216,7 @@ export function MapView({ posts, userLocation, selectedId, onSelect }: MapViewPr
     if (!post) return;
 
     map.easeTo({
-      center: [post.lng, post.lat],
+      center: post.coords.toLngLat(),
       zoom: Math.max(map.getZoom(), 14),
       offset: [0, -110],
       duration: 500,
@@ -231,16 +228,32 @@ export function MapView({ posts, userLocation, selectedId, onSelect }: MapViewPr
     markersRef.current.forEach((marker, id) => {
       const el = marker.getElement();
       const active = id === selectedId;
-      el.style.transform = el.style.transform.replace(/ scale\([^)]*\)/, "");
       el.style.zIndex = active ? "10" : "1";
-      el.style.filter = active ? "drop-shadow(0 0 0 transparent)" : "";
       el.style.opacity = selectedId && !active ? "0.65" : "1";
     });
   }, [selectedId]);
 
   return (
     <>
-      <div ref={containerRef} className="absolute inset-0" />
+      {/*
+        Alto y ancho al 100%, NO `absolute inset-0`: MapLibre le pone la clase
+        `.maplibregl-map` a este div, y su hoja de estilos declara
+        `position: relative` sin capa. Las utilidades de Tailwind v4 viven
+        dentro de `@layer utilities`, y en la cascada lo que no tiene capa
+        siempre gana a lo que sí — así que `absolute` se perdía y el div se
+        quedaba con 0 de alto. Con `h-full` no hay conflicto: MapLibre no toca
+        el tamaño, sólo la posición.
+      */}
+      <div ref={containerRef} className="h-full w-full" />
+
+      {status === "failed" && (
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 px-6 text-center">
+          <p className="text-sm text-[var(--color-ink-2)]">
+            No pudimos cargar el mapa. Las solicitudes cercanas siguen abajo en la
+            lista.
+          </p>
+        </div>
+      )}
       <style>{`@keyframes ay-pulse {
         0% { transform: scale(.85); opacity: .6; }
         70% { transform: scale(1.35); opacity: 0; }

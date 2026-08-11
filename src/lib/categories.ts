@@ -1,7 +1,14 @@
-import type { HelpCategory, Urgency } from "./types";
+import type { PostCategory, Urgency } from "./models/values";
 
+/**
+ * Metadatos de presentación de las listas cerradas.
+ *
+ * Siguen siendo interfaces y no clases: describen configuración estática, no
+ * entidades del dominio. No tienen identidad ni ciclo de vida ni
+ * comportamiento — convertirlas en clases sólo añadiría ceremonia.
+ */
 export interface CategoryMeta {
-  id: HelpCategory;
+  id: PostCategory;
   label: string;
   /** Se usa como pin del mapa y en los chips de filtro. */
   emoji: string;
@@ -23,7 +30,7 @@ export const CATEGORIES: CategoryMeta[] = [
 const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
 
 export function getCategory(id: string): CategoryMeta {
-  return CATEGORY_BY_ID.get(id as HelpCategory) ?? CATEGORIES[CATEGORIES.length - 1];
+  return CATEGORY_BY_ID.get(id as PostCategory) ?? CATEGORIES[CATEGORIES.length - 1];
 }
 
 export interface UrgencyMeta {

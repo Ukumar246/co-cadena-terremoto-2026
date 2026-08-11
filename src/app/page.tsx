@@ -7,10 +7,10 @@ import { MapView } from "@/components/MapView";
 import { NearbySheet } from "@/components/NearbySheet";
 import { requestLocation } from "@/lib/geo";
 import { fetchNearbyPosts } from "@/lib/posts";
-import type { Coords, HelpPost } from "@/lib/types";
+import type { Coords, Post } from "@/lib/models";
 
 export default function HomePage() {
-  const [posts, setPosts] = useState<HelpPost[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isDemo, setIsDemo] = useState(false);
   const [userLocation, setUserLocation] = useState<Coords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);

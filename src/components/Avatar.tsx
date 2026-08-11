@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { initialsOf } from "@/lib/models";
 
 interface AvatarProps {
   name: string;
@@ -7,15 +8,10 @@ interface AvatarProps {
   ringColor?: string;
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
+/**
+ * Deliberadamente tonto: recibe nombre y foto sueltos en vez de un `Post` o un
+ * `User`, así sirve para los dos sin conocer ninguno de los dos modelos.
+ */
 export function Avatar({ name, src, size = 44, ringColor }: AvatarProps) {
   return (
     <div
@@ -34,7 +30,7 @@ export function Avatar({ name, src, size = 44, ringColor }: AvatarProps) {
           className="flex h-full w-full items-center justify-center font-semibold"
           style={{ fontSize: size * 0.36 }}
         >
-          {initials(name)}
+          {initialsOf(name)}
         </span>
       )}
     </div>

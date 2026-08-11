@@ -4,11 +4,11 @@ import { useEffect, useRef } from "react";
 
 import { PostCard } from "./PostCard";
 import { PostDetail } from "./PostDetail";
-import type { HelpPost } from "@/lib/types";
+import type { Post } from "@/lib/models";
 
 interface NearbySheetProps {
-  posts: HelpPost[];
-  selected: HelpPost | null;
+  posts: Post[];
+  selected: Post | null;
   loading: boolean;
   error: string | null;
   expanded: boolean;

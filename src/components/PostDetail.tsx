@@ -4,24 +4,22 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { Avatar } from "./Avatar";
-import { getCategory, getUrgency } from "@/lib/categories";
-import { formatAge, formatDistance } from "@/lib/geo";
+import type { Post, PostWithContact } from "@/lib/models";
 import { fetchPostDetail } from "@/lib/posts";
-import type { HelpPost, HelpPostDetail } from "@/lib/types";
-import { defaultContactMessage, whatsappLink } from "@/lib/whatsapp";
 
 interface PostDetailProps {
-  post: HelpPost;
+  post: Post;
   onBack: () => void;
 }
 
 /**
- * El número de WhatsApp no viene con el listado del mapa; se pide aquí, al
- * abrir una solicitud concreta. Se resuelve antes de pintar el botón para que
- * el enlace sea un `<a>` de verdad y no lo bloquee el navegador.
+ * El número de WhatsApp no viene con el listado del mapa — un `Post` ni
+ * siquiera tiene el campo. Se pide aquí, al abrir una solicitud concreta, y se
+ * resuelve antes de pintar el botón para que el enlace sea un `<a>` de verdad
+ * y no lo bloquee el navegador.
  */
 export function PostDetail({ post, onBack }: PostDetailProps) {
-  const [detail, setDetail] = useState<HelpPostDetail | null>(null);
+  const [detail, setDetail] = useState<PostWithContact | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // El componente se monta con `key={post.id}`, así que no hace falta limpiar
@@ -44,12 +42,9 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
     };
   }, [post.id]);
 
-  const category = getCategory(post.category);
-  const urgency = getUrgency(post.urgency);
-  const waLink = detail
-    ? whatsappLink(detail.whatsapp, defaultContactMessage(detail.name))
-    : null;
-  const mapsLink = `https://www.google.com/maps/dir/?api=1&destination=${post.lat},${post.lng}`;
+  const category = post.categoryMeta;
+  const urgency = post.urgencyMeta;
+  const waLink = detail?.contactLink() ?? null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -80,8 +75,8 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
             </span>
           </div>
           <p className="mt-1 text-xs text-[var(--color-ink-2)]">
-            {formatAge(post.createdAt)}
-            {post.distanceM != null && ` · a ${formatDistance(post.distanceM)} de ti`}
+            {post.age}
+            {post.distanceM != null && ` · a ${post.distanceLabel} de ti`}
           </p>
         </div>
       </div>
@@ -123,7 +118,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
         )}
 
         <a
-          href={mapsLink}
+          href={post.directionsUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center rounded-2xl border border-[var(--color-line)] px-4 py-3 text-sm font-medium active:bg-[var(--color-surface-2)]"

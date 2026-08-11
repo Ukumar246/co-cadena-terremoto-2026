@@ -1,19 +1,16 @@
 "use client";
 
 import { Avatar } from "./Avatar";
-import { getCategory, getUrgency } from "@/lib/categories";
-import { formatAge, formatDistance } from "@/lib/geo";
-import type { HelpPost } from "@/lib/types";
+import type { Post } from "@/lib/models";
 
 interface PostCardProps {
-  post: HelpPost;
+  post: Post;
   onSelect: (id: string) => void;
   active?: boolean;
 }
 
 export function PostCard({ post, onSelect, active = false }: PostCardProps) {
-  const category = getCategory(post.category);
-  const urgency = getUrgency(post.urgency);
+  const category = post.categoryMeta;
 
   return (
     <button
@@ -33,7 +30,7 @@ export function PostCard({ post, onSelect, active = false }: PostCardProps) {
           <span className="truncate font-semibold">{post.name}</span>
           {post.distanceM != null && (
             <span className="shrink-0 text-xs text-[var(--color-ink-2)]">
-              a {formatDistance(post.distanceM)}
+              a {post.distanceLabel}
             </span>
           )}
         </div>
@@ -45,12 +42,12 @@ export function PostCard({ post, onSelect, active = false }: PostCardProps) {
           >
             {category.emoji} {category.label}
           </span>
-          {post.urgency === "alta" && (
+          {post.isUrgent && (
             <span
               className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white"
-              style={{ backgroundColor: urgency.color }}
+              style={{ backgroundColor: post.urgencyMeta.color }}
             >
-              {urgency.label}
+              {post.urgencyMeta.label}
             </span>
           )}
         </div>
@@ -60,7 +57,7 @@ export function PostCard({ post, onSelect, active = false }: PostCardProps) {
         </p>
 
         <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--color-ink-2)]">
-          <span>{formatAge(post.createdAt)}</span>
+          <span>{post.age}</span>
           {post.addressLabel && (
             <>
               <span aria-hidden="true">·</span>
