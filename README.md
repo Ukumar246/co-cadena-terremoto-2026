@@ -94,7 +94,9 @@ delete from public.posts where owner_token like 'seed:%';
 | --- | --- |
 | `src/app/page.tsx` | Landing: mapa a pantalla completa + hoja inferior con las solicitudes cercanas |
 | `src/app/pedir/page.tsx` | Formulario de publicación (sólo metadatos; la UI es `PedirForm`) |
-| `src/components/PedirForm.tsx` | El formulario en 3 pasos: foto → necesidad → ubicación y contacto |
+| `src/components/PedirForm.tsx` | El formulario en 3 pasos: prueba → necesidad → ubicación y contacto |
+| `src/components/SocialProofInput.tsx` | Enlace a la publicación, o usuario del perfil si es una historia |
+| `src/lib/social.ts` | Plataformas, normalización de enlaces y usuarios |
 | `src/components/LocationPicker.tsx` | Mapa con pin fijo al centro para afinar el sitio |
 | `src/components/PhotoInput.tsx` | Selector de imagen que reescala y sube al bucket |
 | `src/lib/maplibre.ts` | Configuración global de MapLibre (URL del worker) |
@@ -133,6 +135,24 @@ qué necesitas, dónde y quién eres. La foto es obligatoria y va primera porque
 es lo que menos cuesta dar cuando estás mal —apuntar y disparar— y lo que más
 información lleva: quien va a moverse ve de un vistazo qué llevar. Además
 empieza a subirse mientras se rellena el resto.
+
+**Cada solicitud necesita respaldo en redes.** O el enlace a la publicación,
+o —si lo que hay es una historia— el usuario del perfil. Las historias de
+Instagram y Facebook caducan a las 24 h y su URL no le sirve a nadie que
+llegue después, así que ahí se guarda a quién buscar y no un enlace que va a
+morir. Sirve para que quien va a moverse pueda comprobar por su cuenta que
+detrás hay una persona con rastro público.
+
+La regla nace hoy, así que el `check` va `not valid`: se exige a todo lo que
+entre de ahora en adelante y no invalida las solicitudes que ya estaban
+publicadas. Sin eso, `alter table` fallaría en cualquier base con datos y el
+esquema dejaría de ser re-ejecutable.
+
+> **El campo del enlace es `type="text"`, no `type="url"`.** La validación
+> nativa del navegador aborta el submit antes de que corra la nuestra —con un
+> globo sin estilo y en el idioma del navegador— y además exige el esquema,
+> así que rechazaba justo lo que le pedimos a la gente que pegue
+> («instagram.com/p/…»). El formulario lleva `noValidate` por lo mismo.
 
 **Las reglas de validación no están en el formulario.** `NewPost.validate()`
 devuelve `{ field, message }`, y cada paso pide sólo los suyos con

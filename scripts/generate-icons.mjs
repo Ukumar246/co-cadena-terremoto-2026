@@ -22,8 +22,14 @@ import sharp from "sharp";
 const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "icons");
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "app");
 
-/** Verde de marca: el mismo `--primary` y `theme_color` del manifiesto. */
-const BRAND = "#0f5c4a";
+/** Amarillo de marca: el mismo `--primary` y `theme_color` del manifiesto. */
+const BRAND = "#ffcd00";
+
+/**
+ * Tinta del glifo. Antes era blanca sobre el verde; sobre el amarillo daría
+ * 1,5:1 y el dibujo desaparecería. Es el mismo `--primary-foreground`.
+ */
+const GLYPH = "#1a1400";
 
 /**
  * Glifo del icono de la app.
@@ -51,7 +57,7 @@ function buildSvg(size, { maskable = false } = {}) {
   const glyph = renderToStaticMarkup(
     createElement(ICON, {
       size: glyphSize,
-      color: "#ffffff",
+      color: GLYPH,
       strokeWidth: 1.75,
     }),
   ).replace("<svg", `<svg x="${offset}" y="${offset}"`);

@@ -22,6 +22,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
@@ -40,7 +41,19 @@
 
 /* La paleta de la app expresada con los nombres semánticos de shadcn, para
    que los componentes de la librería y los nuestros hablen el mismo idioma.
-   `primary` es el verde de marca; `destructive` el rojo de urgencia. */
+   `primary` es el amarillo de la bandera; `destructive` el rojo de urgencia.
+
+   OJO CON EL AMARILLO. #ffcd00 es clarísimo: contra blanco da 1,5:1, así que
+   NO sirve ni para texto sobre fondo claro ni para llevar texto blanco encima.
+   De ahí los dos tokens:
+
+     --primary          relleno. Siempre con `--primary-foreground` (tinta
+                        casi negra) encima: 12,2:1.
+     --primary-strong   el mismo amarillo pero legible como TEXTO o borde
+                        sobre fondo claro: 5,1:1 contra blanco.
+
+   En modo oscuro el problema desaparece —el amarillo sobre #101317 da 12,4:1—
+   y los dos tokens valen lo mismo. */
 :root {
   --background: #ffffff;
   --foreground: #0d1117;
@@ -48,8 +61,9 @@
   --card-foreground: #0d1117;
   --popover: #ffffff;
   --popover-foreground: #0d1117;
-  --primary: #0f5c4a;
-  --primary-foreground: #ffffff;
+  --primary: #ffcd00;
+  --primary-foreground: #1a1400;
+  --primary-strong: #8a6a00;
   --secondary: #f5f6f8;
   --secondary-foreground: #0d1117;
   --muted: #f5f6f8;
@@ -60,7 +74,9 @@
   --destructive-foreground: #ffffff;
   --border: #e3e6ea;
   --input: #e3e6ea;
-  --ring: #0f5c4a;
+  /* El foco usa la variante oscura: un anillo amarillo sobre blanco a 1,5:1
+     no se ve, y el indicador de foco es justo lo que no puede desaparecer. */
+  --ring: #8a6a00;
   --radius: 0.75rem;
 }
 
@@ -72,8 +88,9 @@
     --card-foreground: #f2f4f7;
     --popover: #171b21;
     --popover-foreground: #f2f4f7;
-    --primary: #2fa88a;
-    --primary-foreground: #06231c;
+    --primary: #ffcd00;
+    --primary-foreground: #1a1400;
+    --primary-strong: #ffcd00;
     --secondary: #191d23;
     --secondary-foreground: #f2f4f7;
     --muted: #191d23;
@@ -84,7 +101,7 @@
     --destructive-foreground: #16090a;
     --border: #272c34;
     --input: #272c34;
-    --ring: #2fa88a;
+    --ring: #ffcd00;
   }
 }
 

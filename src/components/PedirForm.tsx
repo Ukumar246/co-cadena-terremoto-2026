@@ -172,8 +172,14 @@ export function PedirForm() {
   if (publishedId) {
     return (
       <main className="pt-safe pb-safe mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-4 px-4 py-6 text-center">
-        <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
-          <CircleCheckBig className="size-8 text-primary" aria-hidden="true" />
+        {/* Tinte + `primary-strong`: el amarillo puro como icono sobre fondo
+            claro se pierde (1,5:1). Aquí el círculo lleva la marca y el trazo
+            lo lleva la variante oscura. */}
+        <div className="flex size-16 items-center justify-center rounded-full bg-primary/20">
+          <CircleCheckBig
+            className="size-8 text-primary-strong"
+            aria-hidden="true"
+          />
         </div>
         <h1 className="text-2xl font-semibold">Tu solicitud ya está en el mapa</h1>
         <p className="text-[15px] leading-relaxed text-muted-foreground">
@@ -244,7 +250,11 @@ export function PedirForm() {
         </Alert>
       )}
 
+      {/* `noValidate`: los mensajes los damos nosotros, en español y con el
+          detalle de qué falta. La validación nativa se adelantaría con un
+          globo del navegador y abortaría el submit sin llegar a `handleNext`. */}
       <form
+        noValidate
         onSubmit={(event) => {
           if (isLastStep) return handleSubmit(event);
           event.preventDefault();

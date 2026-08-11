@@ -62,7 +62,7 @@ export function SocialProofInput({ value, onChange }: SocialProofInputProps) {
               className={cn(
                 "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
                 selected
-                  ? "border-primary bg-primary/10 text-primary"
+                  ? "border-primary bg-primary text-primary-foreground"
                   : "border-border text-muted-foreground active:bg-muted",
               )}
             >
@@ -76,9 +76,16 @@ export function SocialProofInput({ value, onChange }: SocialProofInputProps) {
       {value.mode === "link" ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="social-url">Enlace a tu publicación</Label>
+          {/*
+            `type="text"` y no `type="url"`: la validación nativa del navegador
+            bloquea el submit antes de que corra la nuestra —sin mensaje propio,
+            con un globo en el idioma del navegador— y además exige el esquema,
+            así que rechazaba justo lo que le pedimos a la gente que pegue
+            («instagram.com/p/…»). `inputMode` conserva el teclado de URL.
+          */}
           <Input
             id="social-url"
-            type="url"
+            type="text"
             inputMode="url"
             autoCapitalize="none"
             autoCorrect="off"
@@ -109,7 +116,7 @@ export function SocialProofInput({ value, onChange }: SocialProofInputProps) {
                     className={cn(
                       "rounded-xl border px-2 py-2 text-xs font-medium transition-colors",
                       selected
-                        ? "border-primary bg-primary/10 text-primary"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-border text-muted-foreground active:bg-muted",
                     )}
                   >

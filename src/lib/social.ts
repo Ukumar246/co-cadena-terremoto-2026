@@ -109,11 +109,19 @@ export function normalizeSocialUrl(raw: string): string | null {
   return url.toString();
 }
 
-/** Deduce la plataforma a partir del dominio del enlace. */
+/**
+ * Deduce la plataforma a partir del dominio del enlace.
+ *
+ * Normaliza primero: casi nadie escribe el `https://`, y sin él `new URL()`
+ * lanza y todo acababa clasificado como "otra".
+ */
 export function detectPlatform(url: string): SocialPlatform {
+  const normalized = normalizeSocialUrl(url);
+  if (!normalized) return "otra";
+
   let hostname: string;
   try {
-    hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+    hostname = new URL(normalized).hostname.toLowerCase().replace(/^www\./, "");
   } catch {
     return "otra";
   }

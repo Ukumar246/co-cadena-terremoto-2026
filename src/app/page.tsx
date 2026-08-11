@@ -107,18 +107,27 @@ export default function HomePage() {
           size="sm"
           className="pointer-events-auto flex-row items-center gap-2 bg-card/95 px-3 backdrop-blur"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element --
-              `next/image` rechaza SVG salvo que se active
-              `dangerouslyAllowSVG`, y no vamos a abrir eso en la config por un
-              adorno de 255 bytes que ya pesa menos que su propia petición. */}
-          <img
-            src="/images/flag_colombia.svg"
-            alt=""
-            aria-hidden="true"
-            width={24}
-            height={16}
-            className="h-4 w-6 shrink-0 rounded-[3px] ring-1 ring-black/10"
-          />
+          {/* El `span` no es decorativo: `Card` trae reglas para la foto de
+              portada de una tarjeta (`*:[img:first-child]:rounded-t-xl` y
+              `has-[>img:first-child]:pt-0`). Una bandera de 24 px suelta aquí
+              las activaba y salía con las esquinas de arriba redondeadas a
+              16 px y la tarjeta sin padding superior. Envuelta deja de ser
+              `img` hija directa y las reglas no la ven. */}
+          <span className="shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element --
+                `next/image` rechaza SVG salvo que se active
+                `dangerouslyAllowSVG`, y no vamos a abrir eso en la config por
+                un adorno de 255 bytes que ya pesa menos que su propia
+                petición. */}
+            <img
+              src="/images/flag_colombia.svg"
+              alt=""
+              aria-hidden="true"
+              width={24}
+              height={16}
+              className="block h-4 w-6 rounded-[3px] ring-1 ring-black/10"
+            />
+          </span>
           <div className="min-w-0 flex-1">
             {/* `truncate` por si el nombre crece: aquí compite con el mapa y
                 no puede robarle una segunda línea. */}
