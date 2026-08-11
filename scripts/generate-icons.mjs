@@ -25,7 +25,13 @@ const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "app"
 /** Verde de marca: el mismo `--primary` y `theme_color` del manifiesto. */
 const BRAND = "#0f5c4a";
 
-/** El icono de la app es el mismo que preside la cabecera del mapa. */
+/**
+ * Glifo del icono de la app.
+ *
+ * La cabecera del mapa lleva la bandera de Colombia, no esto: una bandera a
+ * 48 px en la pantalla de inicio, entre otros iconos, no se distingue de las
+ * otras veinte banderas tricolores. Aquí manda que se reconozca de un vistazo.
+ */
 const ICON = HandHeart;
 
 /**

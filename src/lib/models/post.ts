@@ -6,6 +6,12 @@ import {
   type UrgencyMeta,
 } from "../categories";
 import { formatAge, formatDistance } from "../geo";
+import {
+  normalizeHandle,
+  normalizeSocialUrl,
+  socialLink,
+  type SocialPlatform,
+} from "../social";
 import { defaultContactMessage, normalizeWhatsapp, whatsappLink } from "../whatsapp";
 import type { User } from "./user";
 import {
@@ -37,9 +43,12 @@ export interface PostRow {
   distance_m: number | null;
 }
 
-/** Formato del cable para el detalle. Éste sí trae el teléfono. */
+/** Formato del cable para el detalle. Éste sí trae contacto y respaldo. */
 export interface PostWithContactRow extends PostRow {
   whatsapp: string;
+  social_url: string | null;
+  social_handle: string | null;
+  social_platform: string | null;
 }
 
 export interface PostInit {
@@ -193,14 +202,43 @@ export class Post {
  */
 export class PostWithContact extends Post {
   readonly whatsapp: string;
+  /** Enlace a la publicación, si la hay. */
+  readonly socialUrl: string | null;
+  /** Usuario del perfil, cuando el respaldo era una historia. */
+  readonly socialHandle: string | null;
+  readonly socialPlatform: SocialPlatform | null;
 
-  constructor(init: PostInit & { whatsapp: string }) {
+  constructor(
+    init: PostInit & {
+      whatsapp: string;
+      socialUrl?: string | null;
+      socialHandle?: string | null;
+      socialPlatform?: SocialPlatform | null;
+    },
+  ) {
     super(init);
     this.whatsapp = init.whatsapp;
+    this.socialUrl = init.socialUrl ?? null;
+    this.socialHandle = init.socialHandle ?? null;
+    this.socialPlatform = init.socialPlatform ?? null;
   }
 
   static override fromRow(row: PostWithContactRow): PostWithContact {
-    return new PostWithContact({ ...Post.initFromRow(row), whatsapp: row.whatsapp });
+    return new PostWithContact({
+      ...Post.initFromRow(row),
+      whatsapp: row.whatsapp,
+      socialUrl: row.social_url,
+      socialHandle: row.social_handle,
+      socialPlatform: (row.social_platform as SocialPlatform | null) ?? null,
+    });
+  }
+
+  /**
+   * A dónde mandar a quien quiera comprobar la solicitud: la publicación si
+   * existe, y si no el perfil donde estaba la historia.
+   */
+  socialProofLink(): string | null {
+    return socialLink(this.socialUrl, this.socialHandle, this.socialPlatform);
   }
 
   /** Enlace a wa.me con el saludo ya escrito. */
@@ -219,6 +257,11 @@ export interface NewPostInit {
   addressLabel: string | null;
   /** Obligatoria: es el primer paso del formulario y lo que da contexto. */
   photoUrl: string;
+  /** Enlace a la publicación en redes. Alternativa a `socialHandle`. */
+  socialUrl: string | null;
+  /** Usuario del perfil, cuando lo que hay es una historia. */
+  socialHandle: string | null;
+  socialPlatform: SocialPlatform | null;
   urgency: Urgency;
 }
 
@@ -229,7 +272,8 @@ export type NewPostField =
   | "description"
   | "coords"
   | "name"
-  | "whatsapp";
+  | "whatsapp"
+  | "social";
 
 export interface ValidationProblem {
   field: NewPostField;
@@ -258,6 +302,9 @@ export class NewPost {
   readonly coords: Coords;
   readonly addressLabel: string | null;
   readonly photoUrl: string;
+  readonly socialUrl: string | null;
+  readonly socialHandle: string | null;
+  readonly socialPlatform: SocialPlatform | null;
   readonly urgency: Urgency;
 
   constructor(init: NewPostInit) {
@@ -269,6 +316,9 @@ export class NewPost {
     this.coords = init.coords;
     this.addressLabel = init.addressLabel;
     this.photoUrl = init.photoUrl;
+    this.socialUrl = init.socialUrl;
+    this.socialHandle = init.socialHandle;
+    this.socialPlatform = init.socialPlatform;
     this.urgency = init.urgency;
   }
 
@@ -284,6 +334,9 @@ export class NewPost {
       category: "otro",
       description: "",
       addressLabel: null,
+      socialUrl: null,
+      socialHandle: null,
+      socialPlatform: null,
       urgency: "media",
       ...init,
     });
@@ -307,6 +360,25 @@ export class NewPost {
       problems.push({
         field: "photo",
         message: "Añade una foto de la situación.",
+      });
+    }
+    // Obligatorio, en una de dos formas. La historia caduca en 24 h, así que
+    // ahí lo que sirve es el perfil y no un enlace que va a morir.
+    if (!this.socialUrl && !this.socialHandle) {
+      problems.push({
+        field: "social",
+        message:
+          "Añade el enlace a tu publicación, o tu usuario si lo tuyo es una historia.",
+      });
+    } else if (this.socialUrl && !normalizeSocialUrl(this.socialUrl)) {
+      problems.push({
+        field: "social",
+        message: "Ese enlace no parece válido. Cópialo completo desde la app.",
+      });
+    } else if (this.socialHandle && !normalizeHandle(this.socialHandle)) {
+      problems.push({
+        field: "social",
+        message: "Ese usuario no parece válido. Escríbelo sin espacios, como @tunombre.",
       });
     }
     if (!CATEGORY_IDS.has(this.category)) {
@@ -373,6 +445,9 @@ export class NewPost {
       in_avatar_url: this.avatarUrl,
       in_address_label: this.addressLabel?.trim() || null,
       in_photo_url: this.photoUrl,
+      in_social_url: this.socialUrl ? normalizeSocialUrl(this.socialUrl) : null,
+      in_social_handle: this.socialHandle ? normalizeHandle(this.socialHandle) : null,
+      in_social_platform: this.socialPlatform,
       in_urgency: this.urgency,
     };
   }

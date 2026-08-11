@@ -2,13 +2,20 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { ArrowLeft, MapPin, MessageCircle, Navigation } from "lucide-react";
+import {
+  ArrowLeft,
+  AtSign,
+  ExternalLink,
+  MapPin,
+  MessageCircle,
+  Navigation,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Post, PostWithContact } from "@/lib/models";
+import { getPlatform, type Post, type PostWithContact } from "@/lib/models";
 import { fetchPostDetail } from "@/lib/posts";
 
 interface PostDetailProps {
@@ -49,6 +56,8 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
   const category = post.categoryMeta;
   const CategoryIcon = category.icon;
   const waLink = detail?.contactLink() ?? null;
+  const proofLink = detail?.socialProofLink() ?? null;
+  const proofPlatform = detail ? getPlatform(detail.socialPlatform) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -146,6 +155,23 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
             Cómo llegar
           </a>
         </Button>
+
+        {/* El respaldo en redes: quien va a moverse puede comprobar por su
+            cuenta que detrás hay una persona con rastro público. */}
+        {proofLink && (
+          <Button asChild variant="ghost" className="h-11 text-muted-foreground">
+            <a href={proofLink} target="_blank" rel="noopener noreferrer">
+              {detail?.socialUrl ? (
+                <ExternalLink data-icon="inline-start" />
+              ) : (
+                <AtSign data-icon="inline-start" />
+              )}
+              {detail?.socialUrl
+                ? `Ver la publicación${proofPlatform && proofPlatform.id !== "otra" ? ` en ${proofPlatform.label}` : ""}`
+                : `@${detail?.socialHandle} en ${proofPlatform?.label ?? "redes"}`}
+            </a>
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { HandHeart, LocateFixed, Plus } from "lucide-react";
+import { LocateFixed, Plus } from "lucide-react";
 
 import { MapView } from "@/components/MapView";
 import { NearbySheet, SNAP_PEEK } from "@/components/NearbySheet";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { APP_NAME } from "@/lib/app";
 import {
   COARSE_ACCURACY_M,
   formatAccuracy,
@@ -106,9 +107,24 @@ export default function HomePage() {
           size="sm"
           className="pointer-events-auto flex-row items-center gap-2 bg-card/95 px-3 backdrop-blur"
         >
-          <HandHeart className="size-5 text-primary" aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element --
+              `next/image` rechaza SVG salvo que se active
+              `dangerouslyAllowSVG`, y no vamos a abrir eso en la config por un
+              adorno de 255 bytes que ya pesa menos que su propia petición. */}
+          <img
+            src="/images/flag_colombia.svg"
+            alt=""
+            aria-hidden="true"
+            width={24}
+            height={16}
+            className="h-4 w-6 shrink-0 rounded-[3px] ring-1 ring-black/10"
+          />
           <div className="min-w-0 flex-1">
-            <h1 className="text-sm leading-tight font-semibold">Ayuda Ya</h1>
+            {/* `truncate` por si el nombre crece: aquí compite con el mapa y
+                no puede robarle una segunda línea. */}
+            <h1 className="truncate text-sm leading-tight font-semibold">
+              {APP_NAME}
+            </h1>
             <p className="truncate text-[11px] text-muted-foreground">
               {urgentCount > 0
                 ? `${urgentCount} ${urgentCount === 1 ? "caso urgente" : "casos urgentes"} cerca`

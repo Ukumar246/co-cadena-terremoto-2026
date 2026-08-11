@@ -1,15 +1,22 @@
 /** Configuración del mapa y de la consulta "cerca de mí". */
 
 /**
- * Vista inicial antes de que el navegador nos dé la ubicación:
- * Colombia completa. Al conceder permiso, el mapa vuela a la persona.
+ * Vista inicial antes de que el navegador nos dé la ubicación: Cali.
  *
- * TODO: cuando se confirme el epicentro del sismo, cambiar esto por
- * [lng, lat] del epicentro y subir el zoom a ~10 para que la primera
- * pantalla ya muestre la zona afectada aunque nieguen la ubicación.
+ * Que la primera pantalla sea ya la zona afectada es lo que hace la app útil
+ * para quien niega el permiso de ubicación o no tiene GPS — antes se abría
+ * sobre el país entero y no se veía una sola solicitud.
  */
-export const DEFAULT_CENTER: [number, number] = [-74.1, 4.6];
-export const DEFAULT_ZOOM = 5;
+export const DEFAULT_CENTER: [number, number] = [-76.532, 3.4516];
+export const DEFAULT_ZOOM = 12;
+
+/**
+ * Tope de alejamiento. La app sólo cubre Cali: dejar salir el mapa hasta ver
+ * el continente sólo sirve para perderse y para pedir teselas de sitios donde
+ * no hay nada que enseñar. Tres niveles por debajo del inicial dan de sobra
+ * para abarcar la ciudad y su área metropolitana.
+ */
+export const MIN_ZOOM = 9;
 
 /**
  * Zoom al aterrizar sobre la persona.
@@ -21,10 +28,12 @@ export const DEFAULT_ZOOM = 5;
  * encuadre.
  *
  * El máximo es 16 y no más porque las teselas de OpenFreeMap llegan a z14: por
- * encima no aparece detalle nuevo, sólo se agranda el mismo.
+ * encima no aparece detalle nuevo, sólo se agranda el mismo. El mínimo es el
+ * mismo `MIN_ZOOM` del mapa: pedir menos no serviría de nada porque el mapa lo
+ * recortaría igualmente.
  */
 export const LOCATED_MAX_ZOOM = 16;
-export const LOCATED_MIN_ZOOM = 9;
+export const LOCATED_MIN_ZOOM = MIN_ZOOM;
 
 /** Encuadre cuando hay posición pero no se sabe con qué precisión. */
 export const LOCATED_ZOOM = 13;

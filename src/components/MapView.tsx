@@ -16,6 +16,7 @@ import {
   LOCATED_MIN_ZOOM,
   LOCATED_ZOOM,
   MAP_STYLE_URL,
+  MIN_ZOOM,
 } from "@/lib/config";
 import { COARSE_ACCURACY_M, metersPerPixel, type LocationFix } from "@/lib/geo";
 import { configureMapLibre } from "@/lib/maplibre";
@@ -50,7 +51,7 @@ function MarkerContent({ post, onSelect }: MarkerContentProps) {
   return (
     <button
       type="button"
-      className="ay-marker relative block size-11 cursor-pointer border-0 bg-transparent p-0"
+      className="map-marker relative block size-11 cursor-pointer border-0 bg-transparent p-0"
       aria-label={`${post.name} necesita ayuda con ${category.label.toLowerCase()}`}
       onClick={(event) => {
         event.stopPropagation();
@@ -186,6 +187,7 @@ export function MapView({
       style: MAP_STYLE_URL,
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
+      minZoom: MIN_ZOOM,
       attributionControl: { compact: true },
     });
 

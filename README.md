@@ -1,8 +1,12 @@
-# Ayuda Ya · Sismo Colombia
+# Cadena Terremoto Colombia
 
-PWA para ver **quién necesita ayuda cerca de mí** tras el sismo: quién es la
-persona (nombre, foto de perfil), dónde está, qué necesita y una foto de lo que
-pasó. El contacto se hace por WhatsApp.
+PWA para ver **quién necesita ayuda cerca de mí** tras el terremoto: quién es
+la persona (nombre, foto de perfil), dónde está, qué necesita y una foto de lo
+que pasó. El contacto se hace por WhatsApp.
+
+El nombre se escribe en un único sitio, `src/lib/app.ts`. El icono de la
+pantalla de inicio usa la forma corta (**Cadena**) porque Android recorta ahí
+sobre los 12 caracteres; en el resto de sitios va entero.
 
 La pantalla de entrada es el mapa. Nada de registro ni de onboarding: quien
 necesita ayuda no está para crear una cuenta.
@@ -57,11 +61,12 @@ subidas anónimas a propósito.
 
 **Dónde caen las solicitudes.** Las posiciones son distancia + rumbo desde un
 centro configurable en el propio `seed.sql` (`center_lat` / `center_lng`), por
-defecto Chapinero. El navegador te va a geolocalizar donde estés de verdad, así
-que hay dos caminos: fingir la ubicación en Bogotá (DevTools → Sensors →
-Location) o cambiar el centro del seed por tus coordenadas y volver a
-ejecutarlo. Negar el permiso también sirve: `posts_nearby` sin lat/lng devuelve
-lo más reciente del país entero.
+defecto El Peñón (Cali) — el mismo punto que `DEFAULT_CENTER` en
+`src/lib/config.ts`. Si mueves uno, mueve el otro. El navegador te va a
+geolocalizar donde estés de verdad, así que hay dos caminos: fingir la
+ubicación en Cali (DevTools → Sensors → Location) o cambiar el centro del seed
+por tus coordenadas y volver a ejecutarlo. Negar el permiso también sirve:
+`posts_nearby` sin lat/lng devuelve lo más reciente del país entero.
 
 **Ojo con el override de ubicación de DevTools: es pegajoso.** Se queda puesto
 entre recargas y entre sesiones, y no hay nada en la página que lo delate — la
@@ -75,7 +80,7 @@ preguntar. Para ver otra vez el diálogo hay que reiniciarlo en el candado de la
 barra de direcciones.
 
 Para probar el cierre de una solicitud, el token de cada fila es `seed:` más su
-slug — `resolve_post(<id>, 'seed:rescate-cra13')`.
+slug — `resolve_post(<id>, 'seed:rescate-centro')`.
 
 Limpiar sin volver a sembrar:
 
@@ -102,6 +107,7 @@ delete from public.posts where owner_token like 'seed:%';
 | `src/lib/posts.ts` | Única puerta a los datos de solicitudes: listado, detalle, creación, cierre |
 | `src/lib/users.ts` | Perfil de quien tiene sesión iniciada |
 | `src/lib/geo.ts` | Geolocalización del navegador y formato en español |
+| `src/lib/app.ts` | Nombre y descripción de la app. El único sitio donde se escriben |
 | `supabase/schema.sql` | Tabla, índices geoespaciales, RLS y funciones RPC |
 | `supabase/seed.sql` | 25 solicitudes de prueba, idempotentes y recentrables |
 | `public/sw.js` | Service worker: shell y teselas en caché, datos siempre frescos |
@@ -195,6 +201,13 @@ punto es ese mismo radio a escala.
 
 El mapa deja de seguir al GPS en cuanto la persona arrastra o hace zoom: estar
 explorando y que la vista te devuelva a tu casa es insufrible.
+
+**El mapa abre en Cali y no deja alejarse.** `DEFAULT_CENTER` apunta a El Peñón
+con zoom 12, así que la primera pantalla ya es la zona afectada aunque nadie dé
+permiso de ubicación. `MIN_ZOOM` corta el alejamiento tres niveles más abajo:
+la app sólo cubre Cali y salirse hasta ver el continente sólo sirve para
+perderse. Es también el suelo de `LOCATED_MIN_ZOOM`, porque pedir menos zoom
+del que el mapa permite no haría nada.
 
 ### Interfaz
 

@@ -13,6 +13,11 @@ import {
 
 import { LocationPicker } from "./LocationPicker";
 import { PhotoInput } from "./PhotoInput";
+import {
+  EMPTY_SOCIAL_PROOF,
+  SocialProofInput,
+  type SocialProofValue,
+} from "./SocialProofInput";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +31,7 @@ import { watchLocation, type LocationState } from "@/lib/geo";
 import {
   Coords,
   NewPost,
+  detectPlatform,
   type NewPostField,
   type PostCategory,
   type Urgency,
@@ -45,9 +51,9 @@ const MAX_DESCRIPTION = 500;
  */
 const STEPS: { title: string; hint: string; fields: readonly NewPostField[] }[] = [
   {
-    title: "Una foto de lo que pasa",
-    hint: "Es lo primero que ve quien puede ayudarte.",
-    fields: ["photo"],
+    title: "Muestra lo que está pasando",
+    hint: "Una foto y tu publicación en redes. Es lo que hace creíble el resto.",
+    fields: ["photo", "social"],
   },
   {
     title: "Qué necesitas",
@@ -68,6 +74,7 @@ export function PedirForm() {
   const [coords, setCoords] = useState<Coords | null>(null);
 
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [social, setSocial] = useState<SocialProofValue>(EMPTY_SOCIAL_PROOF);
   const [category, setCategory] = useState<PostCategory | null>(null);
   const [description, setDescription] = useState("");
   const [urgency, setUrgency] = useState<Urgency>("media");
@@ -108,6 +115,16 @@ export function PedirForm() {
     coords: pinCoords,
     addressLabel: addressLabel.trim() || null,
     photoUrl: photoUrl ?? "",
+    // Sólo viaja la forma elegida: si se escribió un enlace y luego se cambió
+    // a historia, el enlace no se envía a medias.
+    socialUrl: social.mode === "link" ? social.url.trim() || null : null,
+    socialHandle: social.mode === "story" ? social.handle.trim() || null : null,
+    socialPlatform:
+      social.mode === "story"
+        ? social.platform
+        : social.url.trim()
+          ? detectPlatform(social.url.trim())
+          : null,
     urgency,
   });
 
@@ -254,6 +271,18 @@ export function PedirForm() {
               </a>
               .
             </p>
+
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <span className="text-sm font-semibold">
+                Tu publicación en redes
+              </span>
+              <p className="mb-1 text-xs text-muted-foreground">
+                Quien vaya a ayudarte no te conoce. Poder ver que lo contaste
+                también en tu perfil es lo que convierte un mensaje suelto en
+                algo que alguien se atreve a atender.
+              </p>
+              <SocialProofInput value={social} onChange={setSocial} />
+            </div>
           </div>
         )}
 

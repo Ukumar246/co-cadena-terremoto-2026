@@ -21,3 +21,15 @@ export {
 } from "./post";
 
 export { User, type UserInit, type UserRow } from "./user";
+
+export {
+  SOCIAL_PLATFORMS,
+  STORY_PLATFORMS,
+  detectPlatform,
+  getPlatform,
+  normalizeHandle,
+  normalizeSocialUrl,
+  socialLink,
+  type PlatformMeta,
+  type SocialPlatform,
+} from "../social";

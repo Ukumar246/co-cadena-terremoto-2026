@@ -1,9 +1,11 @@
 import type { MetadataRoute } from "next";
 
+import { APP_NAME, APP_SHORT_NAME } from "@/lib/app";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Ayuda Ya · Sismo Colombia",
-    short_name: "Ayuda Ya",
+    name: APP_NAME,
+    short_name: APP_SHORT_NAME,
     description:
       "Mira quién necesita ayuda cerca de ti y publica tu propia solicitud.",
     lang: "es-CO",

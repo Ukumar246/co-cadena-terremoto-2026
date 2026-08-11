@@ -1,5 +1,5 @@
 -- ============================================================================
---  Esquema de la app de ayuda mutua (sismo Colombia)
+--  Esquema de Cadena Terremoto Colombia (app de ayuda mutua)
 --  Ejecutar en el SQL Editor de Supabase. Es idempotente.
 --
 --  Decisiones de fondo:
@@ -79,6 +79,13 @@ create table if not exists public.posts (
   -- Qué pasó
   photo_url     text,
 
+  -- Respaldo en redes: el enlace a la publicación, o —si lo que hay es una
+  -- historia, que caduca a las 24 h y cuya URL no le sirve a quien llegue
+  -- después— el usuario del perfil donde buscarla.
+  social_url      text,
+  social_handle   text,
+  social_platform text,
+
   -- Ciclo de vida
   status        text not null default 'active',
   owner_token   text not null,
@@ -93,7 +100,17 @@ create table if not exists public.posts (
   constraint posts_lng_range check (lng between -180 and 180),
   constraint posts_name_len check (char_length(name) between 2 and 60),
   constraint posts_description_len check (char_length(description) between 5 and 500),
-  constraint posts_whatsapp_len check (char_length(whatsapp) between 7 and 20)
+  constraint posts_whatsapp_len check (char_length(whatsapp) between 7 and 20),
+  constraint posts_social_url_len check (
+    social_url is null or char_length(social_url) between 8 and 500
+  ),
+  constraint posts_social_handle_fmt check (
+    social_handle is null or social_handle ~ '^[A-Za-z0-9._-]{2,40}$'
+  ),
+  constraint posts_social_platform_valid check (
+    social_platform is null or social_platform in
+      ('instagram','facebook','x','tiktok','threads','youtube','otra')
+  )
 );
 
 create index if not exists posts_location_idx on public.posts using gist (location);
@@ -106,6 +123,58 @@ create index if not exists posts_user_idx on public.posts (user_id)
 -- Migración desde el esquema anterior (sin usuarios).
 alter table public.posts
   add column if not exists user_id uuid references public.users(id) on delete set null;
+
+-- Migración: respaldo en redes.
+alter table public.posts add column if not exists social_url      text;
+alter table public.posts add column if not exists social_handle   text;
+alter table public.posts add column if not exists social_platform text;
+
+-- El respaldo es obligatorio, pero la regla nace hoy: las solicitudes que ya
+-- estaban publicadas no tienen ninguno y no deben quedar en falta. `not valid`
+-- hace exactamente eso — se exige a todo lo que entre o se modifique a partir
+-- de ahora, y no se revisa lo viejo. Sin él, `alter table` fallaría en
+-- cualquier base con datos y el script dejaría de ser re-ejecutable.
+-- Los `constraint` del `create table` sólo se aplican en una base nueva: sobre
+-- una tabla que ya existe, `create table if not exists` no hace nada. Por eso
+-- se vuelven a declarar aquí, saltándose los que ya estén.
+do $$
+declare
+  pending record;
+begin
+  for pending in
+    select *
+    from (values
+      ('posts_social_url_len',
+       $c$social_url is null or char_length(social_url) between 8 and 500$c$, true),
+      ('posts_social_handle_fmt',
+       $c$social_handle is null or social_handle ~ '^[A-Za-z0-9._-]{2,40}$'$c$, true),
+      ('posts_social_platform_valid',
+       $c$social_platform is null or social_platform in
+          ('instagram','facebook','x','tiktok','threads','youtube','otra')$c$, true),
+      -- El respaldo es obligatorio, pero la regla nace hoy: las solicitudes ya
+      -- publicadas no tienen ninguno y no deben quedar en falta. `not valid`
+      -- hace exactamente eso — se exige a todo lo que entre o se modifique de
+      -- ahora en adelante y no se revisa lo viejo. Sin él, este `alter table`
+      -- fallaría en cualquier base con datos y el script dejaría de ser
+      -- re-ejecutable.
+      ('posts_social_present',
+       $c$social_url is not null or social_handle is not null$c$, false)
+    ) as t(name, expression, validate_now)
+  loop
+    if not exists (
+      select 1 from pg_constraint
+      where conrelid = 'public.posts'::regclass and conname = pending.name
+    ) then
+      execute format(
+        'alter table public.posts add constraint %I check (%s)%s',
+        pending.name,
+        pending.expression,
+        case when pending.validate_now then '' else ' not valid' end
+      );
+    end if;
+  end loop;
+end
+$$;
 
 -- `updated_at` automático
 -- `search_path` fijo: sin él, el rol que dispare el trigger decide qué `now()`
@@ -268,6 +337,9 @@ returns table (
   lng           double precision,
   address_label text,
   photo_url     text,
+  social_url      text,
+  social_handle   text,
+  social_platform text,
   urgency       text,
   status        text,
   distance_m    double precision
@@ -280,7 +352,9 @@ as $$
   select
     p.id, p.created_at, p.user_id, p.name, p.avatar_url, p.whatsapp, p.category,
     p.description,
-    p.lat, p.lng, p.address_label, p.photo_url, p.urgency, p.status,
+    p.lat, p.lng, p.address_label, p.photo_url,
+    p.social_url, p.social_handle, p.social_platform,
+    p.urgency, p.status,
     null::double precision as distance_m
   from public.posts p
   where p.id = in_id
@@ -299,10 +373,13 @@ create or replace function public.create_post(
   in_lat           double precision,
   in_lng           double precision,
   in_owner_token   text,
-  in_avatar_url    text default null,
-  in_address_label text default null,
-  in_photo_url     text default null,
-  in_urgency       text default 'media'
+  in_avatar_url      text default null,
+  in_address_label   text default null,
+  in_photo_url       text default null,
+  in_urgency         text default 'media',
+  in_social_url      text default null,
+  in_social_handle   text default null,
+  in_social_platform text default null
 )
 returns uuid
 language plpgsql
@@ -348,12 +425,24 @@ begin
     raise exception 'Hace falta un número de WhatsApp para que puedan contactarte.';
   end if;
 
+  -- El CHECK de la tabla ya lo impide, pero su mensaje es ilegible para quien
+  -- llama a la RPC. Este se puede enseñar tal cual.
+  if nullif(btrim(coalesce(in_social_url, '')), '') is null
+     and nullif(btrim(coalesce(in_social_handle, '')), '') is null then
+    raise exception 'Añade el enlace a tu publicación en redes, o tu usuario si es una historia.';
+  end if;
+
   insert into public.posts (
     user_id, name, avatar_url, whatsapp, category, description,
-    lat, lng, address_label, photo_url, urgency, owner_token
+    lat, lng, address_label, photo_url,
+    social_url, social_handle, social_platform,
+    urgency, owner_token
   ) values (
     v_user_id, v_name, v_avatar_url, v_whatsapp, in_category, btrim(in_description),
     in_lat, in_lng, nullif(btrim(coalesce(in_address_label, '')), ''), in_photo_url,
+    nullif(btrim(coalesce(in_social_url, '')), ''),
+    nullif(btrim(coalesce(in_social_handle, '')), ''),
+    nullif(btrim(coalesce(in_social_platform, '')), ''),
     coalesce(in_urgency, 'media'), in_owner_token
   )
   returning id into new_id;
@@ -404,7 +493,11 @@ $$;
 -- ---------------------------------------------------------------------------
 revoke all on function public.posts_nearby(double precision, double precision, integer, integer) from public, anon, authenticated;
 revoke all on function public.post_detail(uuid) from public, anon, authenticated;
-revoke all on function public.create_post(text, text, text, text, double precision, double precision, text, text, text, text, text) from public, anon, authenticated;
+-- La firma de `create_post` cambió al añadir el respaldo en redes: la versión
+-- vieja hay que tirarla o quedarían las dos publicadas en /rest/v1/rpc.
+drop function if exists public.create_post(text, text, text, text, double precision, double precision, text, text, text, text, text);
+
+revoke all on function public.create_post(text, text, text, text, double precision, double precision, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.resolve_post(uuid, text) from public, anon, authenticated;
 
 -- Internas: mantenimiento y triggers. No son API pública.
@@ -413,7 +506,7 @@ revoke all on function public.handle_new_auth_user() from public, anon, authenti
 
 grant execute on function public.posts_nearby(double precision, double precision, integer, integer) to anon, authenticated;
 grant execute on function public.post_detail(uuid) to anon, authenticated;
-grant execute on function public.create_post(text, text, text, text, double precision, double precision, text, text, text, text, text) to anon, authenticated;
+grant execute on function public.create_post(text, text, text, text, double precision, double precision, text, text, text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.resolve_post(uuid, text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------

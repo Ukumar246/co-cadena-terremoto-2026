@@ -1,4 +1,4 @@
-/* Service worker de "Ayuda Ya".
+/* Service worker de "Cadena Terremoto Colombia".
  *
  * Prioridades, en orden:
  *  1. Que la app abra aunque no haya señal (shell cacheado).

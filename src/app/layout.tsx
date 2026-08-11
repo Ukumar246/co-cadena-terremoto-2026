@@ -2,25 +2,23 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from "@/lib/app";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const APP_NAME = "Ayuda Ya";
-
 export const metadata: Metadata = {
   title: {
     default: `${APP_NAME} · Quién necesita ayuda cerca de mí`,
     template: `%s · ${APP_NAME}`,
   },
-  description:
-    "Mapa de solicitudes de ayuda tras el sismo en Colombia. Mira quién necesita ayuda cerca de ti y contáctalo por WhatsApp.",
+  description: APP_DESCRIPTION,
   applicationName: APP_NAME,
   appleWebApp: {
     capable: true,
-    title: APP_NAME,
+    title: APP_SHORT_NAME,
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },

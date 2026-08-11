@@ -1,3 +1,5 @@
+import { APP_NAME } from "./app";
+
 /** Código de país por defecto: Colombia. */
 const DEFAULT_COUNTRY_CODE = "57";
 
@@ -37,5 +39,7 @@ export function whatsappLink(raw: string, message?: string): string | null {
 /** Mensaje inicial para que quien ayuda no tenga que pensar qué escribir. */
 export function defaultContactMessage(name: string): string {
   const firstName = name.split(/\s+/)[0] ?? name;
-  return `Hola ${firstName}, vi tu solicitud en Ayuda Ya. ¿Todavía necesitas ayuda?`;
+  // El nombre entero, no el corto: quien recibe esto es un desconocido y el
+  // nombre es lo único que le dice de dónde sale el mensaje.
+  return `Hola ${firstName}, vi tu solicitud en ${APP_NAME}. ¿Todavía necesitas ayuda?`;
 }
