@@ -96,6 +96,7 @@ delete from public.posts where owner_token like 'seed:%';
 | `src/app/pedir/page.tsx` | Formulario de publicación (sólo metadatos; la UI es `PedirForm`) |
 | `src/components/PedirForm.tsx` | El formulario en 3 pasos: prueba → necesidad → ubicación y contacto |
 | `src/components/SocialProofInput.tsx` | Enlace a la publicación, o usuario del perfil si es una historia |
+| `src/components/MyPostsBanner.tsx` | Aviso de "tu solicitud sigue abierta" y botones para cerrarla |
 | `src/lib/social.ts` | Plataformas, normalización de enlaces y usuarios |
 | `src/components/LocationPicker.tsx` | Mapa con pin fijo al centro para afinar el sitio |
 | `src/components/PhotoInput.tsx` | Selector de imagen que reescala y sube al bucket |
@@ -135,6 +136,22 @@ qué necesitas, dónde y quién eres. La foto es obligatoria y va primera porque
 es lo que menos cuesta dar cuando estás mal —apuntar y disparar— y lo que más
 información lleva: quien va a moverse ve de un vistazo qué llevar. Además
 empieza a subirse mientras se rellena el resto.
+
+**Quien publica ve un aviso y puede cerrar su solicitud.** Debajo de la
+cabecera, y sólo en el dispositivo que publicó: la prueba es el `owner_token`
+de `localStorage`, el mismo que exigen `resolve_post` y `delete_post`. Dos
+salidas — «Ya me ayudaron», que la marca `resolved` y la conserva, y borrar,
+que la quita del todo y pide confirmación, para lo publicado por error.
+
+El listado sale de `my_posts(owner_token)` y no de una lista de ids guardada
+en el navegador: el servidor es quien sabe si la solicitud caducó sola o se
+cerró desde otra pestaña. Y se lee con `peekOwnerToken()`, que **no** crea
+token si no hay — con `getOwnerToken()` cada visitante quedaría marcado con
+uno sólo por abrir el mapa.
+
+Que esto exista no es cosmético: una solicitud resuelta que sigue en el mapa
+manda a alguien a un sitio donde ya no hace falta, y esa persona deja de estar
+disponible para quien sí la necesita.
 
 **Cada solicitud necesita respaldo en redes.** O el enlace a la publicación,
 o —si lo que hay es una historia— el usuario del perfil. Las historias de

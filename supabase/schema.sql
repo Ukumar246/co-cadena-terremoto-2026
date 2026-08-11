@@ -484,6 +484,69 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
+-- Las solicitudes activas de un dispositivo, para el aviso de "sigue abierta".
+--
+-- Se pregunta por el token y no por una lista de ids guardada en el navegador
+-- porque el servidor es quien sabe la verdad: una solicitud puede haber
+-- caducado sola o haberse cerrado desde otra pestaña, y una lista local se
+-- quedaría enseñando algo que ya no existe.
+-- ---------------------------------------------------------------------------
+create or replace function public.my_posts(in_owner_token text)
+returns table (
+  id          uuid,
+  created_at  timestamptz,
+  name        text,
+  category    text,
+  description text,
+  urgency     text,
+  status      text,
+  expires_at  timestamptz,
+  lat         double precision,
+  lng         double precision
+)
+language sql
+stable
+security definer
+set search_path = public, extensions
+as $$
+  select p.id, p.created_at, p.name, p.category, p.description,
+         p.urgency, p.status, p.expires_at, p.lat, p.lng
+  from public.posts p
+  where char_length(coalesce(in_owner_token, '')) >= 16  -- no se sondea con tokens cortos
+    and p.owner_token = in_owner_token
+    and p.status = 'active'
+    and p.expires_at > now()
+  order by p.created_at desc
+  limit 20;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Borrar del todo, para cuando la solicitud fue un error y no algo resuelto.
+-- Misma prueba de propiedad que `resolve_post`.
+-- ---------------------------------------------------------------------------
+create or replace function public.delete_post(in_id uuid, in_owner_token text)
+returns boolean
+language plpgsql
+volatile
+security definer
+set search_path = public, extensions
+as $$
+declare
+  affected integer;
+begin
+  delete from public.posts
+   where id = in_id
+     and (
+       owner_token = in_owner_token
+       or (auth.uid() is not null and user_id = auth.uid())
+     );
+
+  get diagnostics affected = row_count;
+  return affected > 0;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Permisos: anon sólo puede ejecutar estas cuatro funciones.
 --
 -- OJO: `revoke ... from public` NO basta en Supabase. Los DEFAULT PRIVILEGES
@@ -499,6 +562,8 @@ drop function if exists public.create_post(text, text, text, text, double precis
 
 revoke all on function public.create_post(text, text, text, text, double precision, double precision, text, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.resolve_post(uuid, text) from public, anon, authenticated;
+revoke all on function public.my_posts(text) from public, anon, authenticated;
+revoke all on function public.delete_post(uuid, text) from public, anon, authenticated;
 
 -- Internas: mantenimiento y triggers. No son API pública.
 revoke all on function public.touch_updated_at() from public, anon, authenticated;
@@ -508,6 +573,8 @@ grant execute on function public.posts_nearby(double precision, double precision
 grant execute on function public.post_detail(uuid) to anon, authenticated;
 grant execute on function public.create_post(text, text, text, text, double precision, double precision, text, text, text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.resolve_post(uuid, text) to anon, authenticated;
+grant execute on function public.my_posts(text) to anon, authenticated;
+grant execute on function public.delete_post(uuid, text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Storage: fotos y avatares. Lectura pública, subida anónima.

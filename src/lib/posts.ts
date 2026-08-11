@@ -5,8 +5,10 @@ import {
   NewPost,
   Post,
   PostWithContact,
+  type PostCategory,
   type PostRow,
   type PostWithContactRow,
+  type Urgency,
 } from "./models";
 import { getSupabaseBrowserClient } from "./supabase/client";
 
@@ -81,6 +83,67 @@ export async function createPost(draft: NewPost, ownerToken: string): Promise<st
   const { data, error } = await supabase.rpc("create_post", draft.toRpcArgs(ownerToken));
   if (error) throw new Error(error.message);
   return data as string;
+}
+
+/** Una solicitud propia, tal como la lista el aviso de "sigue abierta". */
+export interface OwnPost {
+  id: string;
+  createdAt: string;
+  category: PostCategory;
+  description: string;
+  urgency: Urgency;
+  expiresAt: string;
+  coords: Coords;
+}
+
+interface OwnPostRow {
+  id: string;
+  created_at: string;
+  category: string;
+  description: string;
+  urgency: string;
+  expires_at: string;
+  lat: number;
+  lng: number;
+}
+
+/**
+ * Las solicitudes activas de este dispositivo.
+ *
+ * Devuelve vacío sin token —nadie ha publicado todavía— y sin Supabase, para
+ * que el modo demo no enseñe un aviso que no lleva a ninguna parte.
+ */
+export async function fetchMyPosts(ownerToken: string | null): Promise<OwnPost[]> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase || !ownerToken) return [];
+
+  const { data, error } = await supabase.rpc("my_posts", {
+    in_owner_token: ownerToken,
+  });
+  if (error) throw new Error(error.message);
+
+  return (data as OwnPostRow[]).map((row) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    category: row.category as PostCategory,
+    description: row.description,
+    urgency: row.urgency as Urgency,
+    expiresAt: row.expires_at,
+    coords: new Coords(row.lat, row.lng),
+  }));
+}
+
+/** Borra del todo una solicitud propia: para las publicadas por error. */
+export async function deletePost(id: string, ownerToken: string): Promise<boolean> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return false;
+
+  const { data, error } = await supabase.rpc("delete_post", {
+    in_id: id,
+    in_owner_token: ownerToken,
+  });
+  if (error) throw new Error(error.message);
+  return Boolean(data);
 }
 
 /**

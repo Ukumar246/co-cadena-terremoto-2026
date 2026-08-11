@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { LocateFixed, Plus } from "lucide-react";
+import { LocateFixed, Plus, Settings } from "lucide-react";
 
 import { MapView } from "@/components/MapView";
+import { MyPostsBanner } from "@/components/MyPostsBanner";
 import { NearbySheet, SNAP_PEEK } from "@/components/NearbySheet";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export default function HomePage() {
   const [locationAttempt, setLocationAttempt] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [snap, setSnap] = useState<number>(SNAP_PEEK);
+  const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +77,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [userLocation]);
+  }, [userLocation, reloadKey]);
 
   const selected = useMemo(
     () => posts.find((post) => post.id === selectedId) ?? null,
@@ -140,7 +142,23 @@ export default function HomePage() {
                 : "Quién necesita ayuda cerca de ti"}
             </p>
           </div>
+
+          {/* Al extremo derecho y centrado en vertical. `shrink-0` para que
+              sea el nombre el que se recorte, nunca el botón. */}
+          <Button
+            asChild
+            variant="ghost"
+            size="icon-lg"
+            className="-mr-1 shrink-0 text-muted-foreground"
+          >
+            <Link href="/acerca" aria-label="Acerca de la app">
+              <Settings className="size-5!" aria-hidden="true" />
+            </Link>
+          </Button>
         </Card>
+
+        {/* Sólo lo ve quien publicó: es su solicitud y su forma de cerrarla. */}
+        <MyPostsBanner onChanged={() => setReloadKey((n) => n + 1)} />
 
         {isDemo && (
           <Alert className="pointer-events-auto bg-card/95 backdrop-blur">

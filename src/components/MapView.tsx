@@ -422,7 +422,17 @@ export function MapView({
           : null;
       })}
 
-      {userHost &&
+      {/*
+        Se comprueba `userFix` y no sólo `userHost`: el contenedor se crea en
+        el navegador y en el servidor no existe, así que sin esta condición el
+        primer render del cliente pintaba un portal que el HTML del servidor
+        no traía y React abortaba la hidratación del árbol entero.
+
+        `userFix` empieza en null en los dos lados, así que el primer render
+        coincide y el punto aparece cuando llega la ubicación de verdad.
+      */}
+      {userFix &&
+        userHost &&
         createPortal(<UserDot accuracyPx={accuracyPx} />, userHost, "user-dot")}
 
       {status === "failed" && (

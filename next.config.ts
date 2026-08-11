@@ -9,6 +9,15 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseHost = supabaseUrl ? new URL(supabaseUrl).hostname : null;
 
 const nextConfig: NextConfig = {
+  /**
+   * Fecha de publicación, sellada al construir. La lee `src/lib/app.ts` y la
+   * enseña la página "Acerca de". Se calcula aquí y no a mano para que no
+   * pueda quedarse vieja: en una emergencia esa fecha es lo que le dice a
+   * alguien si la app sigue mantenida.
+   */
+  env: {
+    NEXT_PUBLIC_BUILD_DATE: new Date().toISOString(),
+  },
   images: {
     remotePatterns: supabaseHost
       ? [
