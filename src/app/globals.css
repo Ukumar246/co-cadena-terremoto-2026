@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f6f8;
+  --color-ink: #0d1117;
+  --color-ink-2: #545c68;
+  --color-line: #e3e6ea;
+  --color-urgent: #dc2626;
+  --color-urgent-ink: #ffffff;
+  --color-brand: #0f5c4a;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  @theme {
+    --color-surface: #101317;
+    --color-surface-2: #191d23;
+    --color-ink: #f2f4f7;
+    --color-ink-2: #9aa3af;
+    --color-line: #272c34;
   }
 }
 
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  /* El mapa gestiona su propio gesto: nada de pull-to-refresh ni rebote. */
+  overscroll-behavior: none;
+}
+
+/* Alturas fiables en móvil aunque la barra del navegador aparezca y desaparezca. */
+.h-screen-safe {
+  height: 100dvh;
+}
+
+/* Respetar el notch y la barra de gestos. */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+/* El popup por defecto de MapLibre no encaja con el resto; lo neutralizamos
+   y lo estilamos desde los componentes. */
+.maplibregl-popup-content {
+  padding: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+  background: var(--color-surface);
+}
+.maplibregl-popup-close-button {
+  display: none;
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--color-surface) !important;
+  border-bottom-color: var(--color-surface) !important;
+}
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
 }
