@@ -16,6 +16,7 @@ interface PostCardProps {
 
 export function PostCard({ post, onSelect, active = false }: PostCardProps) {
   const category = post.categoryMeta;
+  const CategoryIcon = category.icon;
 
   return (
     <button
@@ -61,7 +62,8 @@ export function PostCard({ post, onSelect, active = false }: PostCardProps) {
                 className="border-transparent text-white"
                 style={{ backgroundColor: category.color }}
               >
-                {category.emoji} {category.label}
+                <CategoryIcon aria-hidden="true" />
+                {category.label}
               </Badge>
               {post.isUrgent && (
                 <Badge variant="destructive">{post.urgencyMeta.label}</Badge>

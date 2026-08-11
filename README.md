@@ -79,6 +79,8 @@ delete from public.posts where owner_token like 'seed:%';
 | `src/app/page.tsx` | Landing: mapa a pantalla completa + hoja inferior con las solicitudes cercanas |
 | `src/app/pedir/page.tsx` | Formulario de publicación — **pendiente**, hoy es un marcador de posición |
 | `src/components/MapView.tsx` | MapLibre GL: marcadores con avatar, punto del usuario, vuelo a la ubicación |
+| `src/components/NearbySheet.tsx` | Cajón inferior arrastrable, sobre el `Drawer` de shadcn (vaul) |
+| `src/components/ui/` | Componentes de shadcn. Son nuestros: se editan sin miedo |
 | `src/lib/models/` | El dominio: `Post`, `PostWithContact`, `NewPost`, `User`, `Coords` |
 | `src/lib/posts.ts` | Única puerta a los datos de solicitudes: listado, detalle, creación, cierre |
 | `src/lib/users.ts` | Perfil de quien tiene sesión iniciada |
@@ -132,6 +134,52 @@ manda a alguien a un sitio equivocado, y eso cuesta tiempo real.
 **Las publicaciones caducan a los 7 días** (`expires_at`). Hay una función
 `expire_old_posts()` lista para programar con `pg_cron`.
 
+### Interfaz
+
+[shadcn/ui](https://ui.shadcn.com) sobre Tailwind v4 (preset `radix-nova`,
+base `radix-ui`, iconos `lucide-react`). Los componentes viven en
+`src/components/ui/` y **son código nuestro**: la librería los copia al repo,
+no se instalan como dependencia. Editarlos es el uso previsto, no un parche.
+
+**Todos los iconos son de Lucide.** No hay emoji ni dibujos propios: los emoji
+los pintaba cada sistema operativo a su manera y a tamaño de pin varios eran
+indistinguibles. Cada categoría declara su icono en `src/lib/categories.ts`
+(`icon: LucideIcon`), y hasta los iconos PNG de la PWA salen del mismo trazo —
+`npm run icons` rasteriza `HandHeart` con `sharp` en vez de dibujar formas a
+mano.
+
+La única excepción es el punto azul de "estás aquí": un disco liso es la
+convención de todos los mapas y cualquier glifo dentro se confundiría con una
+solicitud. (`scripts/seed-images.mjs` sigue generando imágenes, pero son fotos
+y avatares de prueba, no iconos.)
+
+Para que los pines pudieran usar iconos de React, `MapView` dejó de construir
+su DOM a mano: ahora crea un `div` vacío por solicitud y le inyecta el
+contenido con `createPortal`. Los contenedores se crean **durante el render**
+—no en un efecto— porque un portal montado después no llega a renderizarse
+nunca; viven en `useState` con inicializador perezoso, ya que leer un `useRef`
+en el render infringe `react-hooks/refs`.
+
+No hay dos sistemas de color. La paleta de la app está escrita con los nombres
+semánticos de shadcn (`--background`, `--muted-foreground`, `--destructive`…)
+en `globals.css`, así que los componentes de la librería y los propios se ven
+igual. `primary` es el verde de marca; `destructive`, el rojo de urgencia.
+
+Modo oscuro por `prefers-color-scheme`, no por clase `.dark`: no hay selector
+de tema. Por eso `globals.css` **no** redefine `@custom-variant dark`, para
+conservar la variante nativa de Tailwind.
+
+Dos cosas que costaron y conviene no repetir:
+
+- **`DrawerContent` pintaba un velo sobre el mapa.** Se le añadió una prop
+  `overlay` (por defecto `true`) para poder apagarlo en el cajón permanente.
+- **vaul asume que el contenido mide una pantalla completa** al colocarlo con
+  `translateY(alto × (1 − snap))`. Con la altura automática de shadcn el panel
+  se iba entero por debajo del borde. Además, `mt-24` y `max-h-[80vh]` vienen
+  detrás del variante `data-[vaul-drawer-direction=bottom]:`, así que anularlos
+  exige repetir ese prefijo: sin él tailwind-merge no los considera la misma
+  regla y la original sigue ganando.
+
 ### Mapa
 
 Teselas vectoriales de [OpenFreeMap](https://openfreemap.org): gratis, sin API
@@ -156,3 +204,18 @@ niegan la ubicación.
 - [ ] Actualización en vivo con Supabase Realtime
 - [ ] Moderación: reportar publicaciones falsas
 - [ ] Rate limiting por IP en las escrituras
+
+## Problemas conocidos
+
+**Avisos del estilo del mapa.** OpenFreeMap Liberty trae tres capas de
+escudos de carretera de EE. UU. cuyo filtro compara contra `null`, y MapLibre
+lo avisa por consola (`Expected value to be of type number, but found null`).
+Es del estilo, no del código, y en Colombia esas capas no pintan nada. Es lo
+que hace aparecer «1 Issue» en el indicador de desarrollo de Next.
+
+**El worker de MapLibre necesita URL fija.** Turbopack no puede resolver
+`new URL(ternario, import.meta.url)`, así que el worker recibía la URL del
+módulo principal y la capa vectorial nunca cargaba — sin errores visibles,
+porque el fallo ocurría dentro del worker. Se resuelve copiándolo a
+`public/maplibre/` y apuntándolo con `setWorkerUrl()` en `MapView.tsx`. Si al
+actualizar maplibre-gl el mapa se queda sólo con el relieve, mirar ahí primero.

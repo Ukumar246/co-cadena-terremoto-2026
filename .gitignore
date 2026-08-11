@@ -47,3 +47,7 @@ logs/
 # Vista previa local de las imágenes de prueba (`npm run seed:images -- --local`).
 # Las de verdad viven en el bucket de Supabase, no en el repo.
 .seed-images/
+
+# Copia del worker de MapLibre: la regenera `predev`/`prebuild` desde
+# node_modules, así no se queda desincronizada con la versión instalada.
+/public/maplibre/

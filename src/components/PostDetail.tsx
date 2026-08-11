@@ -47,6 +47,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
   }, [post.id]);
 
   const category = post.categoryMeta;
+  const CategoryIcon = category.icon;
   const waLink = detail?.contactLink() ?? null;
 
   return (
@@ -83,7 +84,8 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
               className="border-transparent text-white"
               style={{ backgroundColor: category.color }}
             >
-              {category.emoji} {category.label}
+              <CategoryIcon aria-hidden="true" />
+              {category.label}
             </Badge>
             <Badge variant={post.isUrgent ? "destructive" : "secondary"}>
               {post.urgencyMeta.label}
