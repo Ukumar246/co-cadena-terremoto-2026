@@ -108,9 +108,12 @@ alter table public.posts
   add column if not exists user_id uuid references public.users(id) on delete set null;
 
 -- `updated_at` automático
+-- `search_path` fijo: sin él, el rol que dispare el trigger decide qué `now()`
+-- se acaba ejecutando. Es lo que marca el linter de Supabase como WARN.
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.updated_at = now();
@@ -393,11 +396,20 @@ $$;
 
 -- ---------------------------------------------------------------------------
 -- Permisos: anon sólo puede ejecutar estas cuatro funciones.
+--
+-- OJO: `revoke ... from public` NO basta en Supabase. Los DEFAULT PRIVILEGES
+-- del esquema `public` conceden EXECUTE explícitamente a `anon` y
+-- `authenticated` sobre cada función nueva, así que hay que revocarles a ellos
+-- por nombre o quedan publicadas en /rest/v1/rpc sin quererlo.
 -- ---------------------------------------------------------------------------
-revoke all on function public.posts_nearby(double precision, double precision, integer, integer) from public;
-revoke all on function public.post_detail(uuid) from public;
-revoke all on function public.create_post(text, text, text, text, double precision, double precision, text, text, text, text, text) from public;
-revoke all on function public.resolve_post(uuid, text) from public;
+revoke all on function public.posts_nearby(double precision, double precision, integer, integer) from public, anon, authenticated;
+revoke all on function public.post_detail(uuid) from public, anon, authenticated;
+revoke all on function public.create_post(text, text, text, text, double precision, double precision, text, text, text, text, text) from public, anon, authenticated;
+revoke all on function public.resolve_post(uuid, text) from public, anon, authenticated;
+
+-- Internas: mantenimiento y triggers. No son API pública.
+revoke all on function public.touch_updated_at() from public, anon, authenticated;
+revoke all on function public.handle_new_auth_user() from public, anon, authenticated;
 
 grant execute on function public.posts_nearby(double precision, double precision, integer, integer) to anon, authenticated;
 grant execute on function public.post_detail(uuid) to anon, authenticated;
@@ -449,4 +461,4 @@ begin
 end;
 $$;
 
-revoke all on function public.expire_old_posts() from public;
+revoke all on function public.expire_old_posts() from public, anon, authenticated;
